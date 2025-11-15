@@ -84,12 +84,8 @@ const Map = () => {
   useEffect(() => {
     if (!mapContainer.current || companies.length === 0) return;
 
-    const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
-    if (!MAPBOX_TOKEN) {
-      toast.error("Map configuration missing");
-      return;
-    }
-
+    const MAPBOX_TOKEN = "pk.eyJ1IjoiamF5YmlyZDAtMCIsImEiOiJjbWkwN3gxNXMwcjczMmtzZm90YTR3MmsxIn0.shSGbC47Cncskh3-97e-yA";
+    
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
     map.current = new mapboxgl.Map({
