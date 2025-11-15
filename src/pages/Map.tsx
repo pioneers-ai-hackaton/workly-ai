@@ -111,8 +111,20 @@ const Map = () => {
     markers.current.forEach(marker => marker.remove());
     markers.current = [];
 
-    // Add markers for each company
+    // Group companies by coordinates to count unique locations
+    const locationGroups = new window.Map<string, Company[]>();
     companies.forEach((company) => {
+      const key = `${company.coordinates[0]},${company.coordinates[1]}`;
+      if (!locationGroups.has(key)) {
+        locationGroups.set(key, []);
+      }
+      locationGroups.get(key)!.push(company);
+    });
+
+    // Add markers for each unique location
+    locationGroups.forEach((companiesAtLocation, coordKey) => {
+      const company = companiesAtLocation[0]; // Use first company for marker display
+      const companyCount = companiesAtLocation.length;
       const el = document.createElement("div");
       el.className = "custom-marker";
       el.style.width = "40px";
@@ -125,14 +137,28 @@ const Map = () => {
       el.style.display = "flex";
       el.style.alignItems = "center";
       el.style.justifyContent = "center";
-      el.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>`;
+      
+      // Show count badge if multiple companies at same location
+      if (companyCount > 1) {
+        el.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+          <span style="position: absolute; top: -8px; right: -8px; background: hsl(var(--destructive)); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white;">${companyCount}</span>
+        `;
+      } else {
+        el.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>`;
+      }
 
-      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
-        <div style="padding: 8px; cursor: pointer;" class="popup-content">
-          <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: hsl(var(--foreground));">${company.name}</h3>
-          <p style="margin: 0; font-size: 12px; color: hsl(var(--muted-foreground));">${company.position}</p>
-        </div>
-      `);
+      const popupContent = companyCount > 1
+        ? `<div style="padding: 8px; cursor: pointer;" class="popup-content">
+             <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: hsl(var(--foreground));">${companyCount} opportunities here</h3>
+             <p style="margin: 0; font-size: 12px; color: hsl(var(--muted-foreground));">Click to see all positions</p>
+           </div>`
+        : `<div style="padding: 8px; cursor: pointer;" class="popup-content">
+             <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: hsl(var(--foreground));">${company.name}</h3>
+             <p style="margin: 0; font-size: 12px; color: hsl(var(--muted-foreground));">${company.position}</p>
+           </div>`;
+
+      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(popupContent);
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat(company.coordinates)
@@ -188,7 +214,10 @@ const Map = () => {
         {/* Info Banner */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-card/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-large border border-border">
           <p className="text-sm font-medium">
-            📍 {companies.length} job matches found - Click pins to see details
+            📍 {companies.length} job matches at {(() => {
+              const uniqueLocations = new Set(companies.map(c => `${c.coordinates[0]},${c.coordinates[1]}`));
+              return uniqueLocations.size;
+            })()} locations - Click pins to see details
           </p>
         </div>
 
