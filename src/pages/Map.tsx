@@ -37,9 +37,19 @@ const Map = () => {
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
   const messages = location.state?.messages || [];
+  const importedCvData = location.state?.cvData;
+  const importedCompanies = location.state?.companies;
 
   useEffect(() => {
     const generateMatches = async () => {
+      // If CV and companies were imported, use them directly
+      if (importedCvData && importedCompanies) {
+        setCompanies(importedCompanies);
+        setCvData(importedCvData);
+        setIsLoading(false);
+        return;
+      }
+
       if (!messages.length) {
         navigate("/chat");
         return;
@@ -79,7 +89,7 @@ const Map = () => {
     };
 
     generateMatches();
-  }, [messages, navigate]);
+  }, [messages, navigate, importedCvData, importedCompanies]);
 
   useEffect(() => {
     if (!mapContainer.current || companies.length === 0) return;

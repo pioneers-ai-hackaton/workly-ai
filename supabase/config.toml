@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.generate-matches]
 verify_jwt = false
 
+[functions.parse-cv]
+verify_jwt = false
+
 [functions.speech-to-text]
 verify_jwt = false
 
