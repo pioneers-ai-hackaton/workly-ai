@@ -12,47 +12,37 @@ serve(async (req) => {
 
   try {
     const { text, voiceId } = await req.json();
-    const GOOGLE_TTS_API_KEY = Deno.env.get('GOOGLE_TTS_API_KEY');
+    const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
-    if (!GOOGLE_TTS_API_KEY) {
-      throw new Error('GOOGLE_TTS_API_KEY is not configured');
+    if (!ELEVENLABS_API_KEY) {
+      throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
     if (!text) {
       throw new Error('No text provided');
     }
 
-    // Map voice IDs to Google Cloud voice names
-    // Default to en-US-Neural2-C (female) if not specified
-    const voiceMap: Record<string, string> = {
-      'female': 'en-US-Neural2-C',
-      'male': 'en-US-Neural2-D',
-      'aria': 'en-US-Neural2-F',
-      'default': 'en-US-Neural2-C'
-    };
-    
-    const voiceName = voiceMap[voiceId?.toLowerCase()] || voiceMap['default'];
+    // Default to Aria voice if not specified
+    const voice = voiceId || '9BWtsMINqrJLrRacOk9x';
 
-    console.log(`Generating speech with Google Cloud TTS voice: ${voiceName}`);
+    console.log(`Generating speech with voice: ${voice}`);
 
-    // Call Google Cloud Text-to-Speech API
+    // Call Eleven Labs Text-to-Speech API
     const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voice}`,
       {
         method: 'POST',
         headers: {
+          'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY,
         },
         body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: 'en-US',
-            name: voiceName,
-          },
-          audioConfig: {
-            audioEncoding: 'MP3',
-            pitch: 0,
-            speakingRate: 1.0,
+          text,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5,
           },
         }),
       }
@@ -60,20 +50,20 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Google Cloud TTS API error:', response.status, errorText);
+      console.error('Eleven Labs API error:', response.status, errorText);
       throw new Error('Failed to generate speech');
     }
 
-    const data = await response.json();
-    
-    if (!data.audioContent) {
-      throw new Error('No audio content in response');
-    }
+    // Convert audio to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Audio = btoa(
+      String.fromCharCode(...new Uint8Array(arrayBuffer))
+    );
 
     console.log('Speech generated successfully');
 
     return new Response(
-      JSON.stringify({ audio: data.audioContent }),
+      JSON.stringify({ audio: base64Audio }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
