@@ -140,7 +140,7 @@ const Map = () => {
         .addTo(map.current!);
 
       el.addEventListener("click", () => {
-        navigate("/job-details", { state: { company, messages } });
+        navigate("/job-details", { state: { company, messages, companies, cvData } });
       });
 
       markers.current.push(marker);

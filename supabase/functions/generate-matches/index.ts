@@ -29,7 +29,7 @@ serve(async (req) => {
       .map((m: Message) => m.content)
       .join(' ');
 
-    const systemPrompt = `Based on the user's profile from this conversation, generate 6 realistic job matches.
+    const systemPrompt = `Based on the user's profile from this conversation, generate 25-30 realistic job matches.
     Return ONLY a valid JSON array of companies with this exact structure:
     [
       {
@@ -49,6 +49,7 @@ serve(async (req) => {
     
     Make the matches relevant to their skills, experience, and location preferences.
     Use realistic company names, job titles, and accurate coordinates that match their profile.
+    Vary the locations to show opportunities across different cities.
     Do not include any markdown formatting or additional text.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`, {
@@ -69,7 +70,7 @@ serve(async (req) => {
         ],
         generationConfig: {
           temperature: 1,
-          maxOutputTokens: 2048
+          maxOutputTokens: 8192
         }
       }),
     });
