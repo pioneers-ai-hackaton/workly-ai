@@ -57,17 +57,24 @@ serve(async (req) => {
       extractedContext.businessFields.push('sales');
     }
     
-    // Determine current step
+    // Determine current step by looking at the last assistant message's step marker
     let currentStep = 1;
-    const hasEducation = allMessages.match(/\b(degree|university|college|study|graduated|bachelor|master|phd)\b/);
-    const hasExperience = allMessages.match(/\b(work|experience|job|company|position|worked|years|role)\b/);
-    const hasPreferences = allMessages.match(/\b(looking for|prefer|interested in|want|seeking|ideal)\b/);
-    const hasLocation = allMessages.match(/\b(location|city|remote|hybrid|salary|compensation|range)\b/);
     
-    if (hasEducation && !hasExperience) currentStep = 2;
-    else if (hasExperience && !hasPreferences) currentStep = 3;
-    else if (hasPreferences && !hasLocation) currentStep = 4;
-    else if (hasLocation) currentStep = 5;
+    // Find the last step marker from assistant messages
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') {
+        const stepMatch = messages[i].content.match(/STEP:(\d)/);
+        if (stepMatch) {
+          currentStep = Math.min(parseInt(stepMatch[1]) + 1, 5); // Move to next step
+          break;
+        }
+      }
+    }
+    
+    // If this is the very first message, start at step 1
+    if (messages.length === 1) {
+      currentStep = 1;
+    }
 
     // Build detailed questioning paths based on context
     const getDetailedQuestions = (step: number) => {
