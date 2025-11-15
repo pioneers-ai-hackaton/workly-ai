@@ -234,8 +234,12 @@ const Chat = () => {
     setIsUploadingCV(true);
     
     try {
-      // Read file as text
+      console.log('Reading file:', file.name, 'Type:', file.type, 'Size:', file.size);
+      
+      // Read file as text (works for .txt files and sometimes PDF text content)
       const text = await file.text();
+      console.log('Extracted text length:', text.length);
+      console.log('Text preview:', text.substring(0, 200));
       
       // Parse CV using edge function
       const { data: cvData, error: cvError } = await supabase.functions.invoke('parse-cv', {
@@ -244,13 +248,23 @@ const Chat = () => {
 
       if (cvError) throw cvError;
 
+      console.log('Received CV data:', cvData);
+
+      // Check if CV data is valid
+      if (!cvData?.cv || !cvData.cv.name || cvData.cv.name === "Professional Candidate") {
+        toast.error("Could not extract information from CV. Please use a text-based PDF or .txt file.");
+        return;
+      }
+
       // Create summary message from CV for job matching
-      const cvSummary = `Name: ${cvData.cv.name}
-Location: ${cvData.cv.location}
-Summary: ${cvData.cv.summary}
-Skills: ${cvData.cv.skills.join(', ')}
-Experience: ${cvData.cv.experience.map((exp: any) => `${exp.title} at ${exp.company}`).join(', ')}
-Education: ${cvData.cv.education.map((edu: any) => `${edu.degree} from ${edu.institution}`).join(', ')}`;
+      const cvSummary = `Name: ${cvData.cv.name || 'N/A'}
+Location: ${cvData.cv.location || 'N/A'}
+Summary: ${cvData.cv.summary || 'N/A'}
+Skills: ${cvData.cv.skills?.join(', ') || 'N/A'}
+Experience: ${cvData.cv.experience?.map((exp: any) => `${exp.title} at ${exp.company}`).join(', ') || 'N/A'}
+Education: ${cvData.cv.education?.map((edu: any) => `${edu.degree} from ${edu.institution}`).join(', ') || 'N/A'}`;
+
+      console.log('Generated CV summary:', cvSummary);
 
       // Generate job matches based on CV
       const { data: matchesData, error: matchesError } = await supabase.functions.invoke('generate-matches', {
@@ -258,6 +272,8 @@ Education: ${cvData.cv.education.map((edu: any) => `${edu.degree} from ${edu.ins
       });
 
       if (matchesError) throw matchesError;
+
+      console.log('Generated matches:', matchesData);
 
       // Navigate to map with CV data and matches
       navigate("/map", { 
@@ -271,7 +287,7 @@ Education: ${cvData.cv.education.map((edu: any) => `${edu.degree} from ${edu.ins
       toast.success("CV imported successfully!");
     } catch (error) {
       console.error('CV upload error:', error);
-      toast.error("Failed to process CV. Please try again.");
+      toast.error("Failed to process CV. Please try again with a text-based PDF or .txt file.");
     } finally {
       setIsUploadingCV(false);
       if (fileInputRef.current) {
@@ -298,7 +314,7 @@ Education: ${cvData.cv.education.map((edu: any) => `${edu.degree} from ${edu.ins
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.pdf,.doc,.docx"
+              accept=".txt"
               onChange={handleCVUpload}
               className="hidden"
             />
@@ -307,9 +323,10 @@ Education: ${cvData.cv.education.map((edu: any) => `${edu.degree} from ${edu.ins
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingCV}
+              title="Upload your CV as a .txt file"
             >
               <Upload className="h-4 w-4 mr-2" />
-              {isUploadingCV ? "Processing..." : "Import CV"}
+              {isUploadingCV ? "Processing..." : "Import CV (.txt)"}
             </Button>
           </div>
         </div>

@@ -18,7 +18,41 @@ serve(async (req) => {
       throw new Error('GOOGLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `Extract CV information from the provided text and return ONLY a valid JSON object with this exact structure:
+    console.log('Received CV text length:', cvText?.length || 0);
+    console.log('CV text preview:', cvText?.substring(0, 300) || 'empty');
+
+    if (!cvText || cvText.trim().length < 50) {
+      console.error('CV text is empty or too short');
+      return new Response(
+        JSON.stringify({ 
+          cv: {
+            name: "Unknown",
+            email: "unknown@example.com",
+            phone: "",
+            location: "",
+            summary: "Could not extract CV information. Please ensure the file contains readable text.",
+            education: [],
+            experience: [],
+            skills: []
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const systemPrompt = `You are an expert CV/resume parser. Extract information from the provided CV text and return ONLY a valid JSON object.
+    
+    IMPORTANT: Look carefully for:
+    - Name: Usually at the top of the CV
+    - Email: Usually contains @ symbol
+    - Phone: Numbers with country codes or local format
+    - Location: City, State/Country
+    - Summary/Objective: Usually near the top
+    - Education: Degrees, universities, graduation years
+    - Experience: Job titles, companies, dates, descriptions
+    - Skills: Technical skills, soft skills, languages
+    
+    Return this exact JSON structure:
     {
       "name": "Full Name",
       "email": "email@example.com",
@@ -43,8 +77,10 @@ serve(async (req) => {
       "skills": ["Skill 1", "Skill 2", "Skill 3"]
     }
     
-    Extract all available information from the CV text.
-    Do not include any markdown formatting or additional text.`;
+    Extract ALL available information from the CV text. Look carefully at the entire text.
+    If you cannot find a specific field, make a reasonable inference from the context.
+    Do not use placeholder values unless absolutely no information is available.
+    Return ONLY the JSON object, no markdown, no explanations.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`, {
       method: 'POST',
