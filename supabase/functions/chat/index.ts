@@ -23,7 +23,8 @@ serve(async (req) => {
       throw new Error('GOOGLE_API_KEY is not configured');
     }
 
-    // Track conversation progress through explicit step markers and question counts
+    // Analyze conversation to extract context and determine step
+    const lastUserMessage = messages[messages.length - 1]?.content || '';
     const allMessages = messages.map((m: Message) => m.content).join(' ').toLowerCase();
     
     // Extract user's field/domain for personalization
@@ -56,44 +57,19 @@ serve(async (req) => {
       extractedContext.businessFields.push('sales');
     }
     
-    // Determine current step and question count
+    // Determine current step based on conversation content
     let currentStep = 1;
-    let questionsInCurrentStep = 0;
-    const assistantMessages = messages.filter((m: Message) => m.role === 'assistant');
     
-    // Check the last assistant message for step marker
-    if (assistantMessages.length > 0) {
-      const lastAssistant = assistantMessages[assistantMessages.length - 1].content;
-      const stepMatch = lastAssistant.match(/STEP:(\d):Q(\d)/);
-      if (stepMatch) {
-        currentStep = parseInt(stepMatch[1]);
-        questionsInCurrentStep = parseInt(stepMatch[2]);
-      }
-    }
+    // Count exchanges to determine progress
+    const userMessages = messages.filter((m: Message) => m.role === 'user');
+    const exchangeCount = userMessages.length;
     
-    // Count user responses in current step to determine if we should advance
-    const userResponsesSinceLastStepChange = messages.slice().reverse().findIndex((m: Message) => {
-      if (m.role === 'assistant') {
-        const match = m.content.match(/STEP:(\d):Q(\d)/);
-        return match && parseInt(match[1]) !== currentStep;
-      }
-      return false;
-    });
-    
-    const responsesInThisStep = userResponsesSinceLastStepChange === -1 
-      ? messages.filter((m: Message) => m.role === 'user').length 
-      : userResponsesSinceLastStepChange;
-    
-    // If user just responded, increment question counter
-    if (messages[messages.length - 1].role === 'user') {
-      questionsInCurrentStep++;
-      
-      // Move to next step after 4-5 questions
-      if (questionsInCurrentStep >= 5) {
-        currentStep = Math.min(currentStep + 1, 5);
-        questionsInCurrentStep = 0;
-      }
-    }
+    // Simple progression: ~5 exchanges per step
+    if (exchangeCount >= 20) currentStep = 5;
+    else if (exchangeCount >= 15) currentStep = 4;
+    else if (exchangeCount >= 10) currentStep = 3;
+    else if (exchangeCount >= 5) currentStep = 2;
+    else currentStep = 1;
 
     // Build personalized examples based on user's context
     const getPersonalizedExamples = (step: number) => {
@@ -142,93 +118,66 @@ serve(async (req) => {
          Give them an exciting, brief summary of what you've learned about them.
          Tell them you're generating personalized job matches right now and they'll see them on the map in a moment.
          Be warm and encouraging - make them feel confident about their job search!`
-      : `You are an efficient job-finding assistant. You collect information through 5 sections, asking 4-5 questions per section.
+      : `You are a warm career coach helping someone find their dream job. Collect info naturally through conversation.
     
     CURRENT STEP: ${currentStep} of 5
-    QUESTION: ${questionsInCurrentStep + 1} in this section
     
-    ${extractedContext.techFields.length > 0 ? `USER CONTEXT: Tech - ${extractedContext.techFields.join(', ')}` : ''}
-    ${extractedContext.businessFields.length > 0 ? `USER CONTEXT: Business - ${extractedContext.businessFields.join(', ')}` : ''}
+    ${extractedContext.techFields.length > 0 ? `Field: ${extractedContext.techFields.join(', ')}` : ''}
+    ${extractedContext.businessFields.length > 0 ? `Field: ${extractedContext.businessFields.join(', ')}` : ''}
     
     YOUR APPROACH:
-    - Ask ONE focused question at a time
-    - Keep it conversational and brief (1-2 sentences)
-    - After they answer, ask your next question in the same section
-    - After 4-5 questions, move to the next section
-    - Track with marker: STEP:X:QY (X=section, Y=question number)
+    - Have a natural conversation, not an interrogation
+    - Ask 1-2 questions at a time about the current step's topic
+    - Be friendly and warm
+    - After gathering enough info for a step, move to the next
+    
+    STEP ${currentStep} FOCUS:
     
     ${currentStep === 1 ? `
-    📚 SECTION 1: EDUCATION (Questions ${questionsInCurrentStep + 1}/5)
-    Ask about:
-    ${questionsInCurrentStep === 0 ? '1. Degree/field of study' : ''}
-    ${questionsInCurrentStep === 1 ? '2. University/institution' : ''}
-    ${questionsInCurrentStep === 2 ? '3. Graduation year' : ''}
-    ${questionsInCurrentStep === 3 ? '4. Relevant certifications or special focus' : ''}
-    ${questionsInCurrentStep === 4 ? '5. Key projects or coursework' : ''}
-    
-    After question 5, acknowledge and say "Great! Now let's talk about your work experience."
-    END WITH: STEP:1:Q${questionsInCurrentStep + 1}
+    📚 EDUCATION - Ask about their educational background
+    Examples: degree, school, field of study, graduation year
+    STAY ON EDUCATION TOPICS ONLY
+    When you have enough education info, say "Great! Tell me about your work experience."
+    END WITH: STEP:1
     ` : ''}
     
     ${currentStep === 2 ? `
-    💼 SECTION 2: WORK EXPERIENCE (Questions ${questionsInCurrentStep + 1}/5)
-    Ask about:
-    ${questionsInCurrentStep === 0 ? '1. Current/most recent role and company' : ''}
-    ${questionsInCurrentStep === 1 ? '2. Years of experience total' : ''}
-    ${questionsInCurrentStep === 2 ? '3. Key responsibilities' : ''}
-    ${questionsInCurrentStep === 3 ? '4. Main skills/technologies used' : ''}
-    ${questionsInCurrentStep === 4 ? '5. Biggest achievement or project' : ''}
-    
-    After question 5, acknowledge and say "Perfect! Let's discuss what you're looking for."
-    END WITH: STEP:2:Q${questionsInCurrentStep + 1}
+    💼 WORK EXPERIENCE - Ask about their career and skills
+    Examples: jobs, roles, companies, years of experience, key skills
+    STAY ON WORK EXPERIENCE TOPICS ONLY
+    When you have enough experience info, say "Perfect! What kind of job are you looking for?"
+    END WITH: STEP:2
     ` : ''}
     
     ${currentStep === 3 ? `
-    🎯 SECTION 3: JOB PREFERENCES (Questions ${questionsInCurrentStep + 1}/5)
-    Ask about:
-    ${questionsInCurrentStep === 0 ? '1. Ideal role/position title' : ''}
-    ${questionsInCurrentStep === 1 ? '2. Preferred industry or sector' : ''}
-    ${questionsInCurrentStep === 2 ? '3. Company size preference (startup/mid/enterprise)' : ''}
-    ${questionsInCurrentStep === 3 ? '4. Company culture or values that matter' : ''}
-    ${questionsInCurrentStep === 4 ? '5. Growth opportunities you seek' : ''}
-    
-    After question 5, acknowledge and say "Excellent! Now let's talk location and compensation."
-    END WITH: STEP:3:Q${questionsInCurrentStep + 1}
+    🎯 JOB PREFERENCES - Ask what they're looking for
+    Examples: ideal role, industry, company type, culture preferences
+    STAY ON JOB PREFERENCE TOPICS ONLY
+    When you have their preferences, say "Excellent! Let's talk about location and salary."
+    END WITH: STEP:3
     ` : ''}
     
     ${currentStep === 4 ? `
-    📍 SECTION 4: LOCATION & SALARY (Questions ${questionsInCurrentStep + 1}/5)
-    Ask about:
-    ${questionsInCurrentStep === 0 ? '1. Preferred work location (city/cities)' : ''}
-    ${questionsInCurrentStep === 1 ? '2. Remote/hybrid/office preference' : ''}
-    ${questionsInCurrentStep === 2 ? '3. Willing to relocate?' : ''}
-    ${questionsInCurrentStep === 3 ? '4. Target salary range' : ''}
-    ${questionsInCurrentStep === 4 ? '5. Benefits that are important to you' : ''}
-    
-    After question 5, acknowledge and say "Almost done! Just one more section."
-    END WITH: STEP:4:Q${questionsInCurrentStep + 1}
+    📍 LOCATION & SALARY - Ask about logistics
+    Examples: where they want to work, remote preferences, salary expectations
+    STAY ON LOCATION/SALARY TOPICS ONLY
+    When you have this info, say "Almost done! Just a couple final questions."
+    END WITH: STEP:4
     ` : ''}
     
     ${currentStep === 5 ? `
-    ✅ SECTION 5: FINAL DETAILS (Questions ${questionsInCurrentStep + 1}/5)
-    Ask about:
-    ${questionsInCurrentStep === 0 ? '1. When do you want to start?' : ''}
-    ${questionsInCurrentStep === 1 ? '2. Notice period at current job (if applicable)' : ''}
-    ${questionsInCurrentStep === 2 ? '3. Any deal-breakers to avoid?' : ''}
-    ${questionsInCurrentStep === 3 ? '4. Work-life balance priorities' : ''}
-    ${questionsInCurrentStep === 4 ? '5. Anything else important for your search?' : ''}
-    
-    After question 5, say: "Perfect! I have everything. Let me find the best matches for you!"
+    ✅ FINAL DETAILS - Wrap up
+    Ask when they want to start, any deal-breakers, and confirm everything
+    When you have everything, say "Perfect! I have all I need to find great matches for you!"
     Add: CONVERSATION_COMPLETE
-    END WITH: STEP:5:Q${questionsInCurrentStep + 1}
+    END WITH: STEP:5
     ` : ''}
     
-    CRITICAL RULES:
-    - ONE question at a time
-    - Stay in current section until 5 questions asked
-    - Always end with STEP:X:QY marker
-    - Keep responses under 2 sentences
-    - No chit-chat, just questions`;
+    RULES:
+    - Keep responses under 3 sentences
+    - ALWAYS end with STEP:X marker
+    - Stay on the current step's topic
+    - Be conversational, not robotic`;
 
     // Convert messages to Gemini format
     const contents = messages.map((msg: Message) => ({
@@ -282,13 +231,13 @@ serve(async (req) => {
     
     // Check if conversation is complete and extract step
     const ready = assistantMessage.includes('CONVERSATION_COMPLETE');
-    const stepMatch = assistantMessage.match(/STEP:(\d):Q\d/);
+    const stepMatch = assistantMessage.match(/STEP:(\d)/);
     const step = stepMatch ? parseInt(stepMatch[1]) : 1;
     
     // Clean message
     const cleanedMessage = assistantMessage
       .replace('CONVERSATION_COMPLETE', '')
-      .replace(/STEP:\d:Q\d/g, '')
+      .replace(/STEP:\d/g, '')
       .trim();
 
     return new Response(
