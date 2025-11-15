@@ -236,14 +236,30 @@ const Chat = () => {
     try {
       console.log('Reading file:', file.name, 'Type:', file.type, 'Size:', file.size);
       
-      // Read file as text (works for .txt files and sometimes PDF text content)
-      const text = await file.text();
-      console.log('Extracted text length:', text.length);
-      console.log('Text preview:', text.substring(0, 200));
+      let fileContent: string;
+      
+      // For PDFs, convert to base64. For text files, read as text.
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        fileContent = btoa(binary);
+        console.log('Converted PDF to base64, length:', fileContent.length);
+      } else {
+        fileContent = await file.text();
+        console.log('Extracted text length:', fileContent.length);
+      }
       
       // Parse CV using edge function
       const { data: cvData, error: cvError } = await supabase.functions.invoke('parse-cv', {
-        body: { cvText: text }
+        body: { 
+          fileContent,
+          fileType: file.type,
+          fileName: file.name
+        }
       });
 
       if (cvError) throw cvError;
@@ -252,7 +268,7 @@ const Chat = () => {
 
       // Check if CV data is valid
       if (!cvData?.cv || !cvData.cv.name || cvData.cv.name === "Professional Candidate") {
-        toast.error("Could not extract information from CV. Please use a text-based PDF or .txt file.");
+        toast.error("Could not extract information from CV. Please ensure the file contains readable text.");
         return;
       }
 
@@ -287,7 +303,7 @@ Education: ${cvData.cv.education?.map((edu: any) => `${edu.degree} from ${edu.in
       toast.success("CV imported successfully!");
     } catch (error) {
       console.error('CV upload error:', error);
-      toast.error("Failed to process CV. Please try again with a text-based PDF or .txt file.");
+      toast.error("Failed to process CV. Please try again.");
     } finally {
       setIsUploadingCV(false);
       if (fileInputRef.current) {
@@ -314,7 +330,7 @@ Education: ${cvData.cv.education?.map((edu: any) => `${edu.degree} from ${edu.in
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt"
+              accept=".txt,.pdf"
               onChange={handleCVUpload}
               className="hidden"
             />
@@ -323,10 +339,10 @@ Education: ${cvData.cv.education?.map((edu: any) => `${edu.degree} from ${edu.in
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingCV}
-              title="Upload your CV as a .txt file"
+              title="Upload your CV as PDF or text file"
             >
               <Upload className="h-4 w-4 mr-2" />
-              {isUploadingCV ? "Processing..." : "Import CV (.txt)"}
+              {isUploadingCV ? "Processing..." : "Import CV"}
             </Button>
           </div>
         </div>
