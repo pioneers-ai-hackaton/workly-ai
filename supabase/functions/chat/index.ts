@@ -23,82 +23,165 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Determine current step from conversation history
+    // Analyze conversation to extract context and determine step
     const lastUserMessage = messages[messages.length - 1]?.content || '';
-    const allMessages = messages.map((m: Message) => m.content).join(' ');
+    const allMessages = messages.map((m: Message) => m.content).join(' ').toLowerCase();
     
+    // Extract user's field/domain for personalization
+    const extractedContext: Record<string, string[]> = {
+      techFields: [],
+      businessFields: [],
+      skills: [],
+      industries: []
+    };
+    
+    // Tech-related keywords
+    if (allMessages.match(/\b(computer science|cs|software|programming|coding|developer|engineer)\b/)) {
+      extractedContext.techFields.push('software development');
+    }
+    if (allMessages.match(/\b(data science|machine learning|ml|ai|analytics)\b/)) {
+      extractedContext.techFields.push('data science');
+    }
+    if (allMessages.match(/\b(design|ui|ux|figma|sketch)\b/)) {
+      extractedContext.techFields.push('design');
+    }
+    
+    // Business-related keywords
+    if (allMessages.match(/\b(marketing|seo|social media|advertising)\b/)) {
+      extractedContext.businessFields.push('marketing');
+    }
+    if (allMessages.match(/\b(finance|accounting|investment|banking)\b/)) {
+      extractedContext.businessFields.push('finance');
+    }
+    if (allMessages.match(/\b(sales|business development|account)\b/)) {
+      extractedContext.businessFields.push('sales');
+    }
+    
+    // Determine current step
     let currentStep = 1;
-    const hasEducation = allMessages.toLowerCase().includes('degree') || 
-                        allMessages.toLowerCase().includes('university') || 
-                        allMessages.toLowerCase().includes('college') ||
-                        allMessages.toLowerCase().includes('study') ||
-                        allMessages.toLowerCase().includes('graduated');
-    const hasExperience = allMessages.toLowerCase().includes('work') || 
-                         allMessages.toLowerCase().includes('experience') || 
-                         allMessages.toLowerCase().includes('job') ||
-                         allMessages.toLowerCase().includes('company') ||
-                         allMessages.toLowerCase().includes('position');
-    const hasPreferences = allMessages.toLowerCase().includes('looking for') || 
-                          allMessages.toLowerCase().includes('prefer') || 
-                          allMessages.toLowerCase().includes('interested in');
-    const hasLocation = allMessages.toLowerCase().includes('location') || 
-                       allMessages.toLowerCase().includes('city') || 
-                       allMessages.toLowerCase().includes('remote') ||
-                       allMessages.toLowerCase().includes('salary') ||
-                       allMessages.toLowerCase().includes('compensation');
+    const hasEducation = allMessages.match(/\b(degree|university|college|study|graduated|bachelor|master|phd)\b/);
+    const hasExperience = allMessages.match(/\b(work|experience|job|company|position|worked|years|role)\b/);
+    const hasPreferences = allMessages.match(/\b(looking for|prefer|interested in|want|seeking|ideal)\b/);
+    const hasLocation = allMessages.match(/\b(location|city|remote|hybrid|salary|compensation|range)\b/);
     
     if (hasEducation && !hasExperience) currentStep = 2;
     else if (hasExperience && !hasPreferences) currentStep = 3;
     else if (hasPreferences && !hasLocation) currentStep = 4;
     else if (hasLocation) currentStep = 5;
 
+    // Build personalized examples based on user's context
+    const getPersonalizedExamples = (step: number) => {
+      const isTech = extractedContext.techFields.length > 0;
+      const isBusiness = extractedContext.businessFields.length > 0;
+      
+      switch (step) {
+        case 2: // Experience
+          if (isTech && extractedContext.techFields.includes('software development')) {
+            return "What frameworks or languages have you worked with? (e.g., React, Python, Node.js) What types of projects have you built?";
+          }
+          if (isTech && extractedContext.techFields.includes('data science')) {
+            return "What ML frameworks do you use? (e.g., TensorFlow, PyTorch, Scikit-learn) What data problems have you solved?";
+          }
+          if (isBusiness && extractedContext.businessFields.includes('marketing')) {
+            return "What marketing channels are you experienced with? (e.g., SEO, paid ads, social media) What campaigns have you led?";
+          }
+          return "What specific skills and tools do you excel at? What are your key achievements?";
+        
+        case 3: // Preferences
+          if (isTech && extractedContext.techFields.includes('software development')) {
+            return "Are you interested in frontend, backend, or full-stack roles? Do you prefer startups or established companies?";
+          }
+          if (isTech && extractedContext.techFields.includes('data science')) {
+            return "Are you looking for ML engineering, data analysis, or research roles? What type of data problems excite you?";
+          }
+          if (isBusiness && extractedContext.businessFields.includes('marketing')) {
+            return "Do you prefer digital marketing, growth, or brand strategy? Agency or in-house?";
+          }
+          return "What's your ideal role? What type of company culture appeals to you?";
+        
+        case 4: // Location
+          if (isTech) {
+            return "Are you open to remote work? Tech hubs like SF, NYC, Austin? What's your salary range?";
+          }
+          return "Where do you want to work? Remote, hybrid, or in-office? What's your target salary?";
+        
+        default:
+          return "";
+      }
+    };
+
     // System prompt for the job-finding assistant
     const systemPrompt = conversationComplete
-      ? `You are a helpful job-finding assistant. The user has provided all their information. 
-         Summarize what you've learned and let them know you'll now generate job matches for them.
-         Be encouraging and professional.`
-      : `You are a friendly, supportive job search assistant helping users find their perfect job.
+      ? `You are an enthusiastic job-finding assistant. The user has shared all their information! 
+         Give them an exciting, brief summary of what you've learned about them.
+         Tell them you're generating personalized job matches right now and they'll see them on the map in a moment.
+         Be warm and encouraging - make them feel confident about their job search!`
+      : `You are a warm, supportive career coach helping someone find their dream job. You're excited to get to know them!
     
-    You are currently on STEP ${currentStep} of 5. Follow this progression strictly:
+    CURRENT STEP: ${currentStep} of 5
     
-    STEP 1 - Background & Education:
-    - Ask about their educational background (degrees, majors, certifications)
-    - Suggest examples: "For example: Bachelor's in Computer Science, MBA, Self-taught developer"
-    - Ask about graduation year and institution if relevant
-    - ALWAYS end with: STEP:1
+    ${extractedContext.techFields.length > 0 ? `USER CONTEXT: Tech field - ${extractedContext.techFields.join(', ')}` : ''}
+    ${extractedContext.businessFields.length > 0 ? `USER CONTEXT: Business field - ${extractedContext.businessFields.join(', ')}` : ''}
     
-    STEP 2 - Work Experience:
-    - Ask about previous roles and companies
-    - Inquire about key skills and achievements
-    - Suggest examples: "For instance: Software Engineer at Google for 3 years, Startup founder, Career changer from marketing"
-    - ALWAYS end with: STEP:2
+    YOUR CONVERSATION STYLE:
+    - Be genuinely enthusiastic and supportive
+    - Ask 1-2 focused questions at a time (not overwhelming!)
+    - Personalize questions based on what they've told you
+    - Use their specific context to give relevant examples
+    - Celebrate their achievements when they share experience
+    - Make them feel heard and understood
     
-    STEP 3 - Job Preferences:
-    - Ask what type of role/position they're seeking
-    - Inquire about industry preferences
-    - Suggest examples: "Such as: Senior developer role, Product management, Remote-first startup"
-    - ALWAYS end with: STEP:3
+    STEP ${currentStep} GUIDANCE:
     
-    STEP 4 - Location & Compensation:
-    - Ask about location preferences (city, remote, hybrid)
-    - Inquire about salary expectations or range
-    - Suggest examples: "Like: San Francisco Bay Area, Fully remote, $120k-150k range"
-    - ALWAYS end with: STEP:4
+    ${currentStep === 1 ? `
+    📚 BACKGROUND & EDUCATION
+    - Ask about their educational background warmly
+    - If they mention a specific field, show interest and ask relevant follow-ups
+    - Examples should feel natural, not templated
+    - END WITH: STEP:1
+    ` : ''}
     
-    STEP 5 - Final Details:
-    - Gather contact information (email, phone)
-    - Ask about start date availability
-    - Confirm all previous information is correct
-    - Once satisfied, add: CONVERSATION_COMPLETE
-    - ALWAYS end with: STEP:5
+    ${currentStep === 2 ? `
+    💼 WORK EXPERIENCE
+    - Acknowledge their education first!
+    - ${getPersonalizedExamples(2)}
+    - Be specific to their field - ask about relevant tools, frameworks, or methodologies
+    - Show genuine interest in their accomplishments
+    - END WITH: STEP:2
+    ` : ''}
+    
+    ${currentStep === 3 ? `
+    🎯 JOB PREFERENCES
+    - Great! Now let's find what excites them
+    - ${getPersonalizedExamples(3)}
+    - Ask about company size, team dynamics, growth opportunities
+    - Help them envision their ideal role
+    - END WITH: STEP:3
+    ` : ''}
+    
+    ${currentStep === 4 ? `
+    📍 LOCATION & COMPENSATION
+    - Almost there! Let's talk logistics
+    - ${getPersonalizedExamples(4)}
+    - Be realistic but encouraging about salary
+    - Ask about work-life balance preferences
+    - END WITH: STEP:4
+    ` : ''}
+    
+    ${currentStep === 5 ? `
+    ✅ FINAL DETAILS
+    - Review what you've learned in a brief, positive way
+    - Ask when they'd like to start
+    - Confirm they're happy with everything discussed
+    - Once confirmed, add: CONVERSATION_COMPLETE
+    - END WITH: STEP:5
+    ` : ''}
     
     CRITICAL RULES:
-    - ALWAYS include "STEP:X" at the very end of every response
-    - Ask 2-3 specific questions per step
-    - Always provide 2-3 concrete examples or suggestions
-    - Keep tone encouraging and conversational
-    - Never skip steps - complete each one fully before moving to the next
-    - If user provides info for the current step, acknowledge it then move to next step`;
+    - ALWAYS end with "STEP:X" marker
+    - Keep responses conversational and encouraging (3-4 sentences max)
+    - Personalize based on their field - NEVER give generic examples if you know their domain
+    - Make them feel excited about their job search!`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
