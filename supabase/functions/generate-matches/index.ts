@@ -36,12 +36,19 @@ serve(async (req) => {
         "name": "Company Name",
         "position": "Job Title",
         "location": "City, Country",
-        "description": "Brief description of the role and why it matches (2-3 sentences)"
+        "description": "Brief description of the role and why it matches (2-3 sentences)",
+        "coordinates": [longitude, latitude]
       }
     ]
     
+    IMPORTANT: Include realistic GPS coordinates for each location. For example:
+    - San Francisco, USA: [-122.4194, 37.7749]
+    - New York, USA: [-74.006, 40.7128]
+    - London, UK: [-0.1276, 51.5074]
+    - Paris, France: [2.3522, 48.8566]
+    
     Make the matches relevant to their skills, experience, and location preferences.
-    Use realistic company names and job titles that match their profile.
+    Use realistic company names, job titles, and accurate coordinates that match their profile.
     Do not include any markdown formatting or additional text.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -101,19 +108,22 @@ serve(async (req) => {
           name: "Tech Solutions Inc",
           position: "Software Developer",
           location: "San Francisco, USA",
-          description: "Looking for talented developers to join our innovative team. Great benefits and growth opportunities."
+          description: "Looking for talented developers to join our innovative team. Great benefits and growth opportunities.",
+          coordinates: [-122.4194, 37.7749]
         },
         {
           name: "Digital Marketing Pro",
           position: "Marketing Specialist",
           location: "New York, USA",
-          description: "Join our creative marketing team. Work on exciting campaigns for leading brands."
+          description: "Join our creative marketing team. Work on exciting campaigns for leading brands.",
+          coordinates: [-74.006, 40.7128]
         },
         {
           name: "Finance Corp",
           position: "Financial Analyst",
           location: "London, UK",
-          description: "Prestigious financial firm seeking analytical minds. Competitive compensation package."
+          description: "Prestigious financial firm seeking analytical minds. Competitive compensation package.",
+          coordinates: [-0.1276, 51.5074]
         }
       ];
     }

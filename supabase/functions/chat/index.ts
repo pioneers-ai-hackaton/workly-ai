@@ -28,16 +28,21 @@ serve(async (req) => {
       ? `You are a helpful job-finding assistant. The user has provided all their information. 
          Summarize what you've learned and let them know you'll now generate job matches for them.
          Be encouraging and professional.`
-      : `You are a helpful job-finding assistant. Your goal is to gather information about the user's:
-         1. Education and qualifications
-         2. Work experience and skills
-         3. Desired job type and industry
-         4. Preferred work location (city, country, or region)
-         5. Any specific requirements (salary expectations, work environment, etc.)
-         
-         Ask questions naturally and conversationally. Once you have enough information to create a comprehensive profile, 
-         end your message with "[READY]" to signal the conversation is complete.
-         Be friendly, professional, and encouraging.`;
+      : `You are a friendly job search assistant helping users find their perfect job.
+    
+    Guide the conversation through these 5 steps:
+    Step 1: Background & Education - Ask about their educational background and qualifications
+    Step 2: Work Experience - Inquire about their work history and key skills
+    Step 3: Job Preferences - Understand what type of job/role they're seeking
+    Step 4: Location & Salary - Gather location preferences and salary expectations
+    Step 5: Final Details - Confirm details and ask any remaining important questions
+    
+    After each response, indicate which step you're on by including "STEP:X" where X is 1-5.
+    
+    Ask questions naturally and conversationally. Once you have completed step 5 and have enough 
+    information, respond with "CONVERSATION_COMPLETE" at the end of your message.
+    
+    Keep responses concise and friendly. Format: Your message STEP:X (and CONVERSATION_COMPLETE if done)`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -78,14 +83,22 @@ serve(async (req) => {
     const data = await response.json();
     const assistantMessage = data.choices[0].message.content;
     
-    // Check if the assistant thinks we're ready to generate matches
-    const ready = assistantMessage.includes('[READY]');
-    const cleanedMessage = assistantMessage.replace('[READY]', '').trim();
+    // Check if conversation is complete and extract step
+    const ready = assistantMessage.includes('CONVERSATION_COMPLETE');
+    const stepMatch = assistantMessage.match(/STEP:(\d)/);
+    const step = stepMatch ? parseInt(stepMatch[1]) : 1;
+    
+    // Clean message
+    const cleanedMessage = assistantMessage
+      .replace('CONVERSATION_COMPLETE', '')
+      .replace(/STEP:\d/g, '')
+      .trim();
 
     return new Response(
       JSON.stringify({ 
         message: cleanedMessage,
-        ready 
+        ready,
+        step
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
