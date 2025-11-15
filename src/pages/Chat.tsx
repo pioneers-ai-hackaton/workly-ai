@@ -274,32 +274,6 @@ const Chat = () => {
             </Button>
           )}
           
-          {/* Voice Controls */}
-          <div className="flex items-center gap-3 p-3 mb-3 bg-muted/30 rounded-lg border border-border/50 backdrop-blur-sm animate-fade-in">
-            <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
-            
-            <div className="h-8 w-px bg-border/50" /> {/* Separator */}
-            
-            <div className="flex items-center gap-2.5 ml-auto">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {voiceMode ? (
-                  <Mic className="h-4 w-4 text-primary animate-pulse" />
-                ) : (
-                  <Keyboard className="h-4 w-4" />
-                )}
-                <span className="font-medium">
-                  {voiceMode ? 'Voice Mode' : 'Text Mode'}
-                </span>
-              </div>
-              <Switch
-                id="voice-mode"
-                checked={voiceMode}
-                onCheckedChange={setVoiceMode}
-                className="data-[state=checked]:bg-primary"
-              />
-            </div>
-          </div>
-
           {voiceMode ? (
             <Button
               onClick={handleVoiceInput}
@@ -328,8 +302,15 @@ const Chat = () => {
                 e.preventDefault();
                 handleSend();
               }}
-              className="flex gap-2"
+              className="flex gap-2 items-center"
             >
+              <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
+              <Switch
+                id="voice-mode"
+                checked={voiceMode}
+                onCheckedChange={setVoiceMode}
+                className="data-[state=checked]:bg-primary"
+              />
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
