@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Download, Edit2, Save } from "lucide-react";
+import { FileText, Download, Edit2, Save, Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
@@ -173,38 +173,36 @@ const CVViewer = ({ cvData: initialCvData }: CVViewerProps) => {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl">Your Generated CV</DialogTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  {isEditing ? (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  ) : (
-                    <>
-                      <Edit2 className="mr-2 h-4 w-4" />
-                      Edit
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleDownloadPDF}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-                </Button>
-              </div>
-            </div>
+          <DialogHeader className="pr-12">
+            <DialogTitle className="text-2xl">Your Generated CV</DialogTitle>
           </DialogHeader>
+          <div className="flex gap-2 justify-end -mt-2 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(!isEditing)}
+            >
+              {isEditing ? (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </>
+              ) : (
+                <>
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  Edit
+                </>
+              )}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleDownloadPDF}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          </div>
 
           <div className="space-y-6 mt-4">
             {/* Personal Information */}
@@ -262,21 +260,49 @@ const CVViewer = ({ cvData: initialCvData }: CVViewerProps) => {
 
             {/* Education */}
             <div>
-              <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide">Education</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold uppercase tracking-wide">Education</h3>
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCvData({
+                      ...cvData,
+                      education: [...cvData.education, { degree: "", institution: "", year: "" }]
+                    })}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Education
+                  </Button>
+                )}
+              </div>
               <div className="space-y-4">
                 {cvData.education.map((edu, index) => (
-                  <div key={index} className="border-l-2 border-primary pl-4">
+                  <div key={index} className="border-l-2 border-primary pl-4 relative">
                     {isEditing ? (
                       <div className="space-y-2">
-                        <Input
-                          value={edu.degree}
-                          onChange={(e) => {
-                            const newEdu = [...cvData.education];
-                            newEdu[index] = { ...edu, degree: e.target.value };
-                            setCvData({ ...cvData, education: newEdu });
-                          }}
-                          placeholder="Degree"
-                        />
+                        <div className="flex justify-between items-start gap-2">
+                          <Input
+                            value={edu.degree}
+                            onChange={(e) => {
+                              const newEdu = [...cvData.education];
+                              newEdu[index] = { ...edu, degree: e.target.value };
+                              setCvData({ ...cvData, education: newEdu });
+                            }}
+                            placeholder="Degree"
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const newEdu = cvData.education.filter((_, i) => i !== index);
+                              setCvData({ ...cvData, education: newEdu });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                         <Input
                           value={edu.institution}
                           onChange={(e) => {
@@ -312,21 +338,49 @@ const CVViewer = ({ cvData: initialCvData }: CVViewerProps) => {
 
             {/* Experience */}
             <div>
-              <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide">Experience</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold uppercase tracking-wide">Experience</h3>
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCvData({
+                      ...cvData,
+                      experience: [...cvData.experience, { title: "", company: "", period: "", description: "" }]
+                    })}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Experience
+                  </Button>
+                )}
+              </div>
               <div className="space-y-4">
                 {cvData.experience.map((exp, index) => (
-                  <div key={index} className="border-l-2 border-primary pl-4">
+                  <div key={index} className="border-l-2 border-primary pl-4 relative">
                     {isEditing ? (
                       <div className="space-y-2">
-                        <Input
-                          value={exp.title}
-                          onChange={(e) => {
-                            const newExp = [...cvData.experience];
-                            newExp[index] = { ...exp, title: e.target.value };
-                            setCvData({ ...cvData, experience: newExp });
-                          }}
-                          placeholder="Job Title"
-                        />
+                        <div className="flex justify-between items-start gap-2">
+                          <Input
+                            value={exp.title}
+                            onChange={(e) => {
+                              const newExp = [...cvData.experience];
+                              newExp[index] = { ...exp, title: e.target.value };
+                              setCvData({ ...cvData, experience: newExp });
+                            }}
+                            placeholder="Job Title"
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const newExp = cvData.experience.filter((_, i) => i !== index);
+                              setCvData({ ...cvData, experience: newExp });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                         <Input
                           value={exp.company}
                           onChange={(e) => {
