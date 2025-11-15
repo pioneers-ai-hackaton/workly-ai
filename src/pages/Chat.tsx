@@ -31,7 +31,7 @@ const Chat = () => {
   const [totalSteps] = useState(5);
   const [voiceMode, setVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('female');
+  const [selectedVoice, setSelectedVoice] = useState('9BWtsMINqrJLrRacOk9x');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const navigate = useNavigate();

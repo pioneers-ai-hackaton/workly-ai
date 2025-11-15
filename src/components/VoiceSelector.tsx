@@ -12,9 +12,10 @@ interface VoiceSelectorProps {
 }
 
 const voices = [
-  { id: 'female', name: 'Female Voice', description: 'Warm and friendly (Neural2-C)' },
-  { id: 'male', name: 'Male Voice', description: 'Deep and authoritative (Neural2-D)' },
-  { id: 'aria', name: 'Aria', description: 'Professional and clear (Neural2-F)' },
+  { id: '9BWtsMINqrJLrRacOk9x', name: 'Aria', description: 'Natural Female' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', description: 'Professional Female' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', description: 'Clear Male' },
+  { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', description: 'Authoritative Male' },
 ];
 
 export const VoiceSelector = ({ value, onChange }: VoiceSelectorProps) => {
