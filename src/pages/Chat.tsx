@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, ArrowLeft, Mic, MicOff, Keyboard } from "lucide-react";
+import { Send, MapPin, ArrowLeft, Mic, MicOff, Keyboard, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ChatMessage from "@/components/ChatMessage";
@@ -32,8 +32,10 @@ const Chat = () => {
   const [voiceMode, setVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('9BWtsMINqrJLrRacOk9x');
+  const [isUploadingCV, setIsUploadingCV] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const stepLabels = [
@@ -225,6 +227,59 @@ const Chat = () => {
     navigate("/map", { state: { messages } });
   };
 
+  const handleCVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCV(true);
+    
+    try {
+      // Read file as text
+      const text = await file.text();
+      
+      // Parse CV using edge function
+      const { data: cvData, error: cvError } = await supabase.functions.invoke('parse-cv', {
+        body: { cvText: text }
+      });
+
+      if (cvError) throw cvError;
+
+      // Create summary message from CV for job matching
+      const cvSummary = `Name: ${cvData.cv.name}
+Location: ${cvData.cv.location}
+Summary: ${cvData.cv.summary}
+Skills: ${cvData.cv.skills.join(', ')}
+Experience: ${cvData.cv.experience.map((exp: any) => `${exp.title} at ${exp.company}`).join(', ')}
+Education: ${cvData.cv.education.map((edu: any) => `${edu.degree} from ${edu.institution}`).join(', ')}`;
+
+      // Generate job matches based on CV
+      const { data: matchesData, error: matchesError } = await supabase.functions.invoke('generate-matches', {
+        body: { messages: [{ role: 'user', content: cvSummary }] }
+      });
+
+      if (matchesError) throw matchesError;
+
+      // Navigate to map with CV data and matches
+      navigate("/map", { 
+        state: { 
+          messages: [{ role: 'user', content: cvSummary }],
+          cvData: cvData.cv,
+          companies: matchesData.companies
+        } 
+      });
+      
+      toast.success("CV imported successfully!");
+    } catch (error) {
+      console.error('CV upload error:', error);
+      toast.error("Failed to process CV. Please try again.");
+    } finally {
+      setIsUploadingCV(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
       {/* Header */}
@@ -239,7 +294,24 @@ const Chat = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Job Finder Chat</h1>
-          <div className="w-10" /> {/* Spacer for alignment */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.pdf,.doc,.docx"
+              onChange={handleCVUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingCV}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isUploadingCV ? "Processing..." : "Import CV"}
+            </Button>
+          </div>
         </div>
       </header>
 
