@@ -227,19 +227,7 @@ const Chat = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Job Finder Chat</h1>
-          <div className="flex items-center gap-4">
-            <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
-            <div className="flex items-center gap-2">
-              <Label htmlFor="voice-mode" className="text-sm flex items-center gap-1">
-                {voiceMode ? <Mic className="h-4 w-4" /> : <Keyboard className="h-4 w-4" />}
-              </Label>
-              <Switch
-                id="voice-mode"
-                checked={voiceMode}
-                onCheckedChange={setVoiceMode}
-              />
-            </div>
-          </div>
+          <div className="w-10" /> {/* Spacer for alignment */}
         </div>
       </header>
 
@@ -285,6 +273,22 @@ const Chat = () => {
               View Job Matches on Map
             </Button>
           )}
+          
+          {/* Voice Controls */}
+          <div className="flex items-center gap-3 mb-3">
+            <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
+            <div className="flex items-center gap-2 ml-auto">
+              <Label htmlFor="voice-mode" className="text-sm flex items-center gap-1">
+                {voiceMode ? <Mic className="h-4 w-4" /> : <Keyboard className="h-4 w-4" />}
+              </Label>
+              <Switch
+                id="voice-mode"
+                checked={voiceMode}
+                onCheckedChange={setVoiceMode}
+              />
+            </div>
+          </div>
+
           {voiceMode ? (
             <Button
               onClick={handleVoiceInput}
