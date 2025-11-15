@@ -17,10 +17,10 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    if (!GOOGLE_API_KEY) {
+      throw new Error('GOOGLE_API_KEY is not configured');
     }
 
     // Extract user information from conversation
@@ -51,18 +51,26 @@ serve(async (req) => {
     Use realistic company names, job titles, and accurate coordinates that match their profile.
     Do not include any markdown formatting or additional text.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `User profile: ${conversationSummary}` }
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: systemPrompt }]
+          },
+          {
+            role: 'user',
+            parts: [{ text: `User profile: ${conversationSummary}` }]
+          }
         ],
+        generationConfig: {
+          temperature: 1,
+          maxOutputTokens: 2048
+        }
       }),
     });
 
@@ -88,7 +96,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    let companiesText = data.choices[0].message.content;
+    let companiesText = data.candidates[0].content.parts[0].text;
     
     // Clean up the response - remove markdown code blocks if present
     companiesText = companiesText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
