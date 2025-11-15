@@ -23,26 +23,82 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Determine current step from conversation history
+    const lastUserMessage = messages[messages.length - 1]?.content || '';
+    const allMessages = messages.map((m: Message) => m.content).join(' ');
+    
+    let currentStep = 1;
+    const hasEducation = allMessages.toLowerCase().includes('degree') || 
+                        allMessages.toLowerCase().includes('university') || 
+                        allMessages.toLowerCase().includes('college') ||
+                        allMessages.toLowerCase().includes('study') ||
+                        allMessages.toLowerCase().includes('graduated');
+    const hasExperience = allMessages.toLowerCase().includes('work') || 
+                         allMessages.toLowerCase().includes('experience') || 
+                         allMessages.toLowerCase().includes('job') ||
+                         allMessages.toLowerCase().includes('company') ||
+                         allMessages.toLowerCase().includes('position');
+    const hasPreferences = allMessages.toLowerCase().includes('looking for') || 
+                          allMessages.toLowerCase().includes('prefer') || 
+                          allMessages.toLowerCase().includes('interested in');
+    const hasLocation = allMessages.toLowerCase().includes('location') || 
+                       allMessages.toLowerCase().includes('city') || 
+                       allMessages.toLowerCase().includes('remote') ||
+                       allMessages.toLowerCase().includes('salary') ||
+                       allMessages.toLowerCase().includes('compensation');
+    
+    if (hasEducation && !hasExperience) currentStep = 2;
+    else if (hasExperience && !hasPreferences) currentStep = 3;
+    else if (hasPreferences && !hasLocation) currentStep = 4;
+    else if (hasLocation) currentStep = 5;
+
     // System prompt for the job-finding assistant
     const systemPrompt = conversationComplete
       ? `You are a helpful job-finding assistant. The user has provided all their information. 
          Summarize what you've learned and let them know you'll now generate job matches for them.
          Be encouraging and professional.`
-      : `You are a friendly job search assistant helping users find their perfect job.
+      : `You are a friendly, supportive job search assistant helping users find their perfect job.
     
-    Guide the conversation through these 5 steps:
-    Step 1: Background & Education - Ask about their educational background and qualifications
-    Step 2: Work Experience - Inquire about their work history and key skills
-    Step 3: Job Preferences - Understand what type of job/role they're seeking
-    Step 4: Location & Salary - Gather location preferences and salary expectations
-    Step 5: Final Details - Confirm details and ask any remaining important questions
+    You are currently on STEP ${currentStep} of 5. Follow this progression strictly:
     
-    After each response, indicate which step you're on by including "STEP:X" where X is 1-5.
+    STEP 1 - Background & Education:
+    - Ask about their educational background (degrees, majors, certifications)
+    - Suggest examples: "For example: Bachelor's in Computer Science, MBA, Self-taught developer"
+    - Ask about graduation year and institution if relevant
+    - ALWAYS end with: STEP:1
     
-    Ask questions naturally and conversationally. Once you have completed step 5 and have enough 
-    information, respond with "CONVERSATION_COMPLETE" at the end of your message.
+    STEP 2 - Work Experience:
+    - Ask about previous roles and companies
+    - Inquire about key skills and achievements
+    - Suggest examples: "For instance: Software Engineer at Google for 3 years, Startup founder, Career changer from marketing"
+    - ALWAYS end with: STEP:2
     
-    Keep responses concise and friendly. Format: Your message STEP:X (and CONVERSATION_COMPLETE if done)`;
+    STEP 3 - Job Preferences:
+    - Ask what type of role/position they're seeking
+    - Inquire about industry preferences
+    - Suggest examples: "Such as: Senior developer role, Product management, Remote-first startup"
+    - ALWAYS end with: STEP:3
+    
+    STEP 4 - Location & Compensation:
+    - Ask about location preferences (city, remote, hybrid)
+    - Inquire about salary expectations or range
+    - Suggest examples: "Like: San Francisco Bay Area, Fully remote, $120k-150k range"
+    - ALWAYS end with: STEP:4
+    
+    STEP 5 - Final Details:
+    - Gather contact information (email, phone)
+    - Ask about start date availability
+    - Confirm all previous information is correct
+    - Once satisfied, add: CONVERSATION_COMPLETE
+    - ALWAYS end with: STEP:5
+    
+    CRITICAL RULES:
+    - ALWAYS include "STEP:X" at the very end of every response
+    - Ask 2-3 specific questions per step
+    - Always provide 2-3 concrete examples or suggestions
+    - Keep tone encouraging and conversational
+    - Never skip steps - complete each one fully before moving to the next
+    - If user provides info for the current step, acknowledge it then move to next step`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
