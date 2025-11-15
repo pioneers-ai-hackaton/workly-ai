@@ -14,8 +14,6 @@ interface Company {
   location: string;
   description: string;
   coordinates: [number, number];
-  matchPercentage?: number;
-  salary?: string;
 }
 
 interface CVData {
@@ -155,16 +153,9 @@ const Map = () => {
              <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: hsl(var(--foreground));">${companyCount} opportunities here</h3>
              <p style="margin: 0; font-size: 12px; color: hsl(var(--muted-foreground));">Click to see all positions</p>
            </div>`
-        : `<div style="padding: 12px; cursor: pointer; min-width: 200px;" class="popup-content">
-             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-               <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: hsl(var(--foreground));">${company.name}</h3>
-               ${company.matchPercentage ? `<span style="background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">${company.matchPercentage}% Match</span>` : ''}
-             </div>
-             <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 500; color: hsl(var(--foreground));">${company.position}</p>
-             ${company.salary ? `<p style="margin: 0; font-size: 12px; color: hsl(var(--muted-foreground)); display: flex; align-items: center; gap: 4px;">
-               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
-               ${company.salary}
-             </p>` : ''}
+        : `<div style="padding: 8px; cursor: pointer;" class="popup-content">
+             <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: hsl(var(--foreground));">${company.name}</h3>
+             <p style="margin: 0; font-size: 12px; color: hsl(var(--muted-foreground));">${company.position}</p>
            </div>`;
 
       const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(popupContent);

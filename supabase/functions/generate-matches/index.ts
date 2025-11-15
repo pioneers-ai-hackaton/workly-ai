@@ -37,23 +37,18 @@ serve(async (req) => {
         "position": "Job Title",
         "location": "City, Country",
         "description": "Brief description of the role and why it matches (2-3 sentences)",
-        "coordinates": [longitude, latitude],
-        "matchPercentage": 85,
-        "salary": "$120,000 - $150,000"
+        "coordinates": [longitude, latitude]
       }
     ]
     
-    IMPORTANT: 
-    - Include realistic GPS coordinates for each location. For example:
-      * San Francisco, USA: [-122.4194, 37.7749]
-      * New York, USA: [-74.006, 40.7128]
-      * London, UK: [-0.1276, 51.5074]
-      * Paris, France: [2.3522, 48.8566]
-    - matchPercentage should be 70-98 based on how well the job fits their profile
-    - salary should be realistic for the position and location in local currency format
+    IMPORTANT: Include realistic GPS coordinates for each location. For example:
+    - San Francisco, USA: [-122.4194, 37.7749]
+    - New York, USA: [-74.006, 40.7128]
+    - London, UK: [-0.1276, 51.5074]
+    - Paris, France: [2.3522, 48.8566]
     
     Make the matches relevant to their skills, experience, and location preferences.
-    Use realistic company names, job titles, salary ranges, and accurate coordinates that match their profile.
+    Use realistic company names, job titles, and accurate coordinates that match their profile.
     Vary the locations to show opportunities across different cities.
     Do not include any markdown formatting or additional text.`;
 
