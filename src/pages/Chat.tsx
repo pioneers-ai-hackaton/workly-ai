@@ -325,7 +325,7 @@ Education: ${cvData.cv.education?.map((edu: any) => `${edu.degree} from ${edu.in
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Job Finder Chat</h1>
+          <h1 className="text-xl font-semibold">Let Workly find your fit</h1>
           <div>
             <input
               ref={fileInputRef}

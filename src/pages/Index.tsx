@@ -7,8 +7,21 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      {/* Header */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <Briefcase className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Workly</h2>
+            <p className="text-sm text-muted-foreground">Your career, simplified.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-6 animate-in fade-in slide-in-from-top duration-500">
             <Sparkles className="h-4 w-4" />
