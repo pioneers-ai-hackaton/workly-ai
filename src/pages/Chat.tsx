@@ -70,7 +70,8 @@ const Chat = () => {
       const { data, error } = await supabase.functions.invoke("chat", {
         body: { 
           messages: [...messages, { role: "user", content: userMessage }],
-          conversationComplete 
+          conversationComplete,
+          currentStep
         },
       });
 
