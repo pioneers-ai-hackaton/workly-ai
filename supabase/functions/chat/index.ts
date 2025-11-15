@@ -244,11 +244,11 @@ serve(async (req) => {
     
     ${currentStep === 5 ? `
     📍 LOGISTICS & FINAL DETAILS
-    - Get practical details ONE at a time
-    - Location preferences, remote willingness, salary range
-    - Once all details collected, say something exciting like "Perfect! I have everything I need to find your ideal job matches!"
-    - Then add: CONVERSATION_COMPLETE
-    - END WITH: STEP:5
+    - Get practical details ONE at a time: location, remote work, salary expectations
+    - After collecting final details, say: "Perfect! I have everything I need to find your ideal job matches!"
+    - YOU MUST INCLUDE BOTH MARKERS: Add "CONVERSATION_COMPLETE" on a new line, then "STEP:5" on another line
+    - These markers are CRITICAL - the system needs them to show the job matches button
+    - Keep your final message SHORT - just the exciting confirmation, then the markers
     ` : ''}
     
     CRITICAL RULES:
