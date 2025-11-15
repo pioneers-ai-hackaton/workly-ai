@@ -69,41 +69,98 @@ serve(async (req) => {
     else if (hasPreferences && !hasLocation) currentStep = 4;
     else if (hasLocation) currentStep = 5;
 
-    // Build personalized examples based on user's context
-    const getPersonalizedExamples = (step: number) => {
+    // Build detailed questioning paths based on context
+    const getDetailedQuestions = (step: number) => {
       const isTech = extractedContext.techFields.length > 0;
       const isBusiness = extractedContext.businessFields.length > 0;
       
       switch (step) {
-        case 2: // Experience
+        case 1: // Education - dig deeper
           if (isTech && extractedContext.techFields.includes('software development')) {
-            return "What frameworks or languages have you worked with? (e.g., React, Python, Node.js) What types of projects have you built?";
+            return `Ask ONE specific question at a time:
+            - What programming languages did you learn? (Python, Java, JavaScript, C++?)
+            - Which frameworks or libraries have you used? (React, Angular, Node.js, Django?)
+            - Any relevant coursework? (Data Structures, Algorithms, Web Development?)
+            - University clubs or hackathons you participated in?`;
           }
           if (isTech && extractedContext.techFields.includes('data science')) {
-            return "What ML frameworks do you use? (e.g., TensorFlow, PyTorch, Scikit-learn) What data problems have you solved?";
+            return `Ask ONE question at a time:
+            - Which data analysis tools have you used? (Python, R, SQL, Tableau?)
+            - ML/AI coursework or projects? (Machine Learning, Deep Learning, NLP?)
+            - Any research experience or publications?
+            - Statistics or mathematics background?`;
           }
-          if (isBusiness && extractedContext.businessFields.includes('marketing')) {
-            return "What marketing channels are you experienced with? (e.g., SEO, paid ads, social media) What campaigns have you led?";
-          }
-          return "What specific skills and tools do you excel at? What are your key achievements?";
+          return `Dig into education details ONE question at a time:
+          - Specific major/concentration?
+          - Relevant coursework that stands out?
+          - Academic clubs, societies, or leadership roles?
+          - Projects or research?`;
         
-        case 3: // Preferences
+        case 2: // Experience - be very specific
           if (isTech && extractedContext.techFields.includes('software development')) {
-            return "Are you interested in frontend, backend, or full-stack roles? Do you prefer startups or established companies?";
+            return `Get concrete details ONE at a time:
+            - Tech stack used? (Frontend: React/Vue/Angular? Backend: Node/Python/Java?)
+            - What did you build specifically? (Web apps, mobile apps, APIs, microservices?)
+            - Team size and your role? (Solo, small team, large team?)
+            - Specific achievements or metrics? (Performance improvements, features shipped, users impacted?)`;
           }
           if (isTech && extractedContext.techFields.includes('data science')) {
-            return "Are you looking for ML engineering, data analysis, or research roles? What type of data problems excite you?";
+            return `Get specific experience ONE question at a time:
+            - ML frameworks and libraries? (TensorFlow, PyTorch, Scikit-learn, Pandas?)
+            - Types of models built? (Classification, regression, NLP, computer vision?)
+            - Data pipeline tools? (Spark, Airflow, SQL databases?)
+            - Impact of your work? (Accuracy improvements, business value, insights generated?)`;
           }
           if (isBusiness && extractedContext.businessFields.includes('marketing')) {
-            return "Do you prefer digital marketing, growth, or brand strategy? Agency or in-house?";
+            return `Get marketing experience details ONE at a time:
+            - Channels managed? (SEO, SEM, social media, email, content?)
+            - Campaign results? (CTR, conversions, ROI improvements?)
+            - Tools used? (Google Analytics, HubSpot, Salesforce, SEMrush?)
+            - Audience size or budget managed?`;
           }
-          return "What's your ideal role? What type of company culture appeals to you?";
+          return `Get work experience details ONE at a time:
+          - Specific responsibilities and daily tasks?
+          - Tools and technologies used?
+          - Measurable achievements or impact?
+          - Team collaboration and leadership roles?`;
         
-        case 4: // Location
+        case 3: // Skills - comprehensive list
           if (isTech) {
-            return "Are you open to remote work? Tech hubs like SF, NYC, Austin? What's your salary range?";
+            return `Build comprehensive skills list by asking ONE at a time:
+            - Programming languages (rate proficiency: beginner/intermediate/advanced)?
+            - Frameworks and libraries you're confident with?
+            - Development tools? (Git, Docker, CI/CD, testing frameworks?)
+            - Soft skills? (Team collaboration, communication, problem-solving?)
+            - Certifications or online courses completed?`;
           }
-          return "Where do you want to work? Remote, hybrid, or in-office? What's your target salary?";
+          return `Map out all skills ONE category at a time:
+          - Core technical skills and tools?
+          - Software proficiency? (Microsoft Office, CRM systems, analytics tools?)
+          - Communication and leadership experience?
+          - Certifications or specialized training?`;
+        
+        case 4: // Preferences - be specific
+          if (isTech) {
+            return `Narrow down preferences ONE at a time:
+            - Role type? (Frontend, backend, full-stack, DevOps, data engineering?)
+            - Company stage? (Startup, scale-up, established company, enterprise?)
+            - Industry interest? (Fintech, healthcare, e-commerce, SaaS, gaming?)
+            - Team size preference? (Small agile team vs large organization?)
+            - Work style? (Remote, hybrid, in-office?)`;
+          }
+          return `Define ideal role ONE aspect at a time:
+          - Specific position or job titles you're targeting?
+          - Industry or sector preference?
+          - Company culture and values important to you?
+          - Work arrangement? (Remote, hybrid, office?)`;
+        
+        case 5: // Location & Logistics
+          return `Get practical details ONE at a time:
+          - Preferred cities or willingness to relocate?
+          - Remote work expectations?
+          - Salary expectations or range?
+          - Start date availability?
+          - Any visa or relocation considerations?`;
         
         default:
           return "";
@@ -124,64 +181,77 @@ serve(async (req) => {
     ${extractedContext.businessFields.length > 0 ? `USER CONTEXT: Business field - ${extractedContext.businessFields.join(', ')}` : ''}
     
     YOUR CONVERSATION STYLE:
-    - Be genuinely enthusiastic and supportive
-    - Ask 1-2 focused questions at a time (not overwhelming!)
-    - Personalize questions based on what they've told you
-    - Use their specific context to give relevant examples
-    - Celebrate their achievements when they share experience
-    - Make them feel heard and understood
+    - Be warm and encouraging but FOCUSED
+    - Ask ONE specific question at a time (short, digestible messages!)
+    - ALWAYS include concrete examples in parentheses to jog their memory
+    - Questions should be specific enough to guide but open enough for stories
+    - Celebrate what they share and dig deeper with follow-ups
+    - Each question should help build a 90% complete CV
+    
+    QUESTIONING STRATEGY:
+    ${getDetailedQuestions(currentStep)}
     
     STEP ${currentStep} GUIDANCE:
     
     ${currentStep === 1 ? `
-    📚 BACKGROUND & EDUCATION
-    - Ask about their educational background warmly
-    - If they mention a specific field, show interest and ask relevant follow-ups
-    - Examples should feel natural, not templated
+    📚 EDUCATION DEEP DIVE
+    - Start with degree and university
+    - Then ask ONE targeted question from the list above
+    - Include example answers in parentheses to help them remember
+    - If CS student: dig into programming languages, frameworks, coursework, clubs
+    - If business: ask about concentrations, relevant coursework, leadership roles
+    - Wait for their answer before asking the next question
     - END WITH: STEP:1
     ` : ''}
     
     ${currentStep === 2 ? `
-    💼 WORK EXPERIENCE
-    - Acknowledge their education first!
-    - ${getPersonalizedExamples(2)}
-    - Be specific to their field - ask about relevant tools, frameworks, or methodologies
-    - Show genuine interest in their accomplishments
+    💼 EXPERIENCE DETAILS
+    - Acknowledge their education with enthusiasm!
+    - Ask ONE specific question from the experience guidance above
+    - For tech: get exact tech stack, project types, achievements with metrics
+    - For non-tech: get tools used, responsibilities, measurable impact
+    - ALWAYS include example tools/technologies in parentheses
+    - Wait for details before moving to next aspect
     - END WITH: STEP:2
     ` : ''}
     
     ${currentStep === 3 ? `
-    🎯 JOB PREFERENCES
-    - Great! Now let's find what excites them
-    - ${getPersonalizedExamples(3)}
-    - Ask about company size, team dynamics, growth opportunities
-    - Help them envision their ideal role
+    🔧 COMPREHENSIVE SKILLS
+    - This is where we build the complete skills section!
+    - Ask about ONE skill category at a time from the guidance
+    - For tech: programming languages (with proficiency), frameworks, tools
+    - Include examples to remind them of what they might know
+    - Don't skip certifications or online courses!
     - END WITH: STEP:3
     ` : ''}
     
     ${currentStep === 4 ? `
-    📍 LOCATION & COMPENSATION
-    - Almost there! Let's talk logistics
-    - ${getPersonalizedExamples(4)}
-    - Be realistic but encouraging about salary
-    - Ask about work-life balance preferences
+    🎯 ROLE PREFERENCES
+    - Now define their ideal job clearly
+    - Ask ONE preference question at a time
+    - Get specific: role type, company stage, industry, team size
+    - Help them visualize their perfect position
+    - Include examples of role types or companies
     - END WITH: STEP:4
     ` : ''}
     
     ${currentStep === 5 ? `
-    ✅ FINAL DETAILS
-    - Review what you've learned in a brief, positive way
-    - Ask when they'd like to start
-    - Confirm they're happy with everything discussed
-    - Once confirmed, add: CONVERSATION_COMPLETE
+    📍 LOGISTICS & FINAL DETAILS
+    - Get practical details ONE at a time
+    - Location preferences, remote willingness, salary range
+    - Briefly recap what you've learned
+    - Once all details collected, add: CONVERSATION_COMPLETE
     - END WITH: STEP:5
     ` : ''}
     
     CRITICAL RULES:
     - ALWAYS end with "STEP:X" marker
-    - Keep responses conversational and encouraging (3-4 sentences max)
-    - Personalize based on their field - NEVER give generic examples if you know their domain
-    - Make them feel excited about their job search!`;
+    - Ask ONE focused question at a time (2-3 sentences max per message)
+    - ALWAYS include concrete examples in parentheses (tools, frameworks, languages, etc.)
+    - Questions should be specific enough to guide answers but leave room for storytelling
+    - Every question should extract CV-worthy information
+    - Make them excited to share their experiences!
+    - Keep messages short and digestible - NO giant text blocks!`;
 
     // Convert messages to Gemini format
     const contents = messages.map((msg: Message) => ({
