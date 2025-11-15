@@ -2,11 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, ArrowLeft } from "lucide-react";
+import { Send, MapPin, ArrowLeft, Mic, MicOff, Keyboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ChatMessage from "@/components/ChatMessage";
 import { Progress } from "@/components/ui/progress";
+import { VoiceSelector } from "@/components/VoiceSelector";
+import { AudioRecorder } from "@/utils/audioRecorder";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Message {
   role: "user" | "assistant";
@@ -25,7 +29,11 @@ const Chat = () => {
   const [conversationComplete, setConversationComplete] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [totalSteps] = useState(5);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState('9BWtsMINqrJLrRacOk9x');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const navigate = useNavigate();
 
   const stepLabels = [
@@ -43,6 +51,10 @@ const Chat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    audioRecorderRef.current = new AudioRecorder();
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -83,11 +95,117 @@ const Chat = () => {
       if (data.ready) {
         setConversationComplete(true);
       }
+
+      // If voice mode is enabled, generate speech for the response
+      if (voiceMode) {
+        await generateSpeech(data.message);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Failed to send message. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateSpeech = async (text: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+        body: { text, voiceId: selectedVoice }
+      });
+
+      if (error) throw error;
+
+      // Play the audio
+      const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
+      audio.play();
+    } catch (error: any) {
+      console.error('Error generating speech:', error);
+      toast.error('Failed to generate speech');
+    }
+  };
+
+  const handleVoiceInput = async () => {
+    if (!audioRecorderRef.current) return;
+
+    if (isRecording) {
+      try {
+        const audioData = await audioRecorderRef.current.stop();
+        setIsRecording(false);
+
+        setIsLoading(true);
+
+        // Transcribe audio
+        const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke(
+          'speech-to-text',
+          { body: { audio: audioData } }
+        );
+
+        if (transcriptError) throw transcriptError;
+
+        const transcript = transcriptData.text;
+        if (!transcript) {
+          toast.error('No speech detected');
+          setIsLoading(false);
+          return;
+        }
+
+        // Add the transcribed text as a user message
+        setMessages((prev) => [...prev, { role: "user", content: transcript }]);
+
+        // Send to chat API
+        const { data, error } = await supabase.functions.invoke("chat", {
+          body: { 
+            messages: [...messages, { role: "user", content: transcript }],
+            conversationComplete 
+          },
+        });
+
+        if (error) {
+          if (error.message?.includes("429")) {
+            toast.error("Too many requests. Please wait a moment and try again.");
+          } else if (error.message?.includes("402")) {
+            toast.error("Service limit reached. Please contact support.");
+          } else {
+            throw error;
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.message },
+        ]);
+
+        if (data.step && data.step <= totalSteps) {
+          setCurrentStep(data.step);
+        }
+
+        if (data.ready) {
+          setConversationComplete(true);
+        }
+
+        // Generate speech for the response
+        if (voiceMode) {
+          await generateSpeech(data.message);
+        }
+
+        setIsLoading(false);
+      } catch (error: any) {
+        console.error('Error processing voice input:', error);
+        toast.error('Failed to process voice input');
+        setIsLoading(false);
+      }
+    } else {
+      try {
+        await audioRecorderRef.current.start();
+        setIsRecording(true);
+        toast.success('Recording started - speak now');
+      } catch (error: any) {
+        console.error('Error starting recording:', error);
+        toast.error('Failed to start recording. Please allow microphone access.');
+      }
     }
   };
 
@@ -109,7 +227,19 @@ const Chat = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Job Finder Chat</h1>
-          <div className="w-10" /> {/* Spacer for alignment */}
+          <div className="flex items-center gap-4">
+            <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
+            <div className="flex items-center gap-2">
+              <Label htmlFor="voice-mode" className="text-sm flex items-center gap-1">
+                {voiceMode ? <Mic className="h-4 w-4" /> : <Keyboard className="h-4 w-4" />}
+              </Label>
+              <Switch
+                id="voice-mode"
+                checked={voiceMode}
+                onCheckedChange={setVoiceMode}
+              />
+            </div>
+          </div>
         </div>
       </header>
 
@@ -155,29 +285,49 @@ const Chat = () => {
               View Job Matches on Map
             </Button>
           )}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex gap-2"
-          >
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              disabled={isLoading}
-              className="flex-1"
-            />
+          {voiceMode ? (
             <Button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              size="icon"
-              className="bg-primary hover:bg-primary/90"
+              onClick={handleVoiceInput}
+              disabled={isLoading || conversationComplete}
+              className={`w-full ${isRecording ? 'bg-destructive hover:bg-destructive/90' : 'bg-primary hover:bg-primary/90'}`}
             >
-              <Send className="h-4 w-4" />
+              {isRecording ? (
+                <>
+                  <MicOff className="h-4 w-4 mr-2" />
+                  Stop Recording
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Processing...' : 'Start Recording'}
+                </>
+              )}
             </Button>
-          </form>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message..."
+                disabled={isLoading}
+                className="flex-1"
+              />
+              <Button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                size="icon"
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </div>
