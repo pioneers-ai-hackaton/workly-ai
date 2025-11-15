@@ -261,7 +261,11 @@ const Chat = () => {
 
           <div className="space-y-4">
             {messages.map((message, index) => (
-              <ChatMessage key={index} message={message} />
+              <ChatMessage 
+                key={index} 
+                message={message}
+                onPlayAudio={generateSpeech}
+              />
             ))}
             {isLoading && (
               <ChatMessage
