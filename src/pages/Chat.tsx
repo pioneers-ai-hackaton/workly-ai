@@ -274,60 +274,62 @@ const Chat = () => {
             </Button>
           )}
           
-          {voiceMode ? (
-            <Button
-              onClick={handleVoiceInput}
-              disabled={isLoading || conversationComplete}
-              className={`w-full h-12 font-medium transition-all duration-300 ${
-                isRecording 
-                  ? 'bg-destructive hover:bg-destructive/90 animate-pulse' 
-                  : 'bg-primary hover:bg-primary/90 hover:scale-[1.02]'
-              }`}
-            >
-              {isRecording ? (
-                <>
-                  <MicOff className="h-5 w-5 mr-2" />
-                  Stop Recording
-                </>
-              ) : (
-                <>
-                  <Mic className="h-5 w-5 mr-2" />
-                  {isLoading ? 'Processing...' : 'Start Recording'}
-                </>
-              )}
-            </Button>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSend();
-              }}
-              className="flex gap-2 items-center"
-            >
-              <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
-              <Switch
-                id="voice-mode"
-                checked={voiceMode}
-                onCheckedChange={setVoiceMode}
-                className="data-[state=checked]:bg-primary"
-              />
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                disabled={isLoading}
-                className="flex-1"
-              />
+          <div className="flex gap-2 items-center">
+            <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
+            <Switch
+              id="voice-mode"
+              checked={voiceMode}
+              onCheckedChange={setVoiceMode}
+              className="data-[state=checked]:bg-primary"
+            />
+            {voiceMode ? (
               <Button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                size="icon"
-                className="bg-primary hover:bg-primary/90"
+                onClick={handleVoiceInput}
+                disabled={isLoading || conversationComplete}
+                className={`flex-1 h-10 font-medium transition-all duration-300 ${
+                  isRecording 
+                    ? 'bg-destructive hover:bg-destructive/90 animate-pulse' 
+                    : 'bg-primary hover:bg-primary/90 hover:scale-[1.02]'
+                }`}
               >
-                <Send className="h-4 w-4" />
+                {isRecording ? (
+                  <>
+                    <MicOff className="h-5 w-5 mr-2" />
+                    Stop Recording
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-5 w-5 mr-2" />
+                    {isLoading ? 'Processing...' : 'Start Recording'}
+                  </>
+                )}
               </Button>
-            </form>
-          )}
+            ) : (
+              <>
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  disabled={isLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={isLoading || !input.trim()}
+                  size="icon"
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
