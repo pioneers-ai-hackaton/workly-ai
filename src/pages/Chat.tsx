@@ -37,11 +37,11 @@ const Chat = () => {
   const navigate = useNavigate();
 
   const stepLabels = [
-    "Background & Education",
-    "Work Experience",
-    "Job Preferences",
-    "Location & Salary",
-    "Final Details"
+    "Education",
+    "Experience",
+    "Skills",
+    "Preferences",
+    "Location & Salary"
   ];
 
   const scrollToBottom = () => {
