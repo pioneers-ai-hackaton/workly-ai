@@ -275,16 +275,27 @@ const Chat = () => {
           )}
           
           {/* Voice Controls */}
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 p-3 mb-3 bg-muted/30 rounded-lg border border-border/50 backdrop-blur-sm animate-fade-in">
             <VoiceSelector value={selectedVoice} onChange={setSelectedVoice} />
-            <div className="flex items-center gap-2 ml-auto">
-              <Label htmlFor="voice-mode" className="text-sm flex items-center gap-1">
-                {voiceMode ? <Mic className="h-4 w-4" /> : <Keyboard className="h-4 w-4" />}
-              </Label>
+            
+            <div className="h-8 w-px bg-border/50" /> {/* Separator */}
+            
+            <div className="flex items-center gap-2.5 ml-auto">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {voiceMode ? (
+                  <Mic className="h-4 w-4 text-primary animate-pulse" />
+                ) : (
+                  <Keyboard className="h-4 w-4" />
+                )}
+                <span className="font-medium">
+                  {voiceMode ? 'Voice Mode' : 'Text Mode'}
+                </span>
+              </div>
               <Switch
                 id="voice-mode"
                 checked={voiceMode}
                 onCheckedChange={setVoiceMode}
+                className="data-[state=checked]:bg-primary"
               />
             </div>
           </div>
@@ -293,16 +304,20 @@ const Chat = () => {
             <Button
               onClick={handleVoiceInput}
               disabled={isLoading || conversationComplete}
-              className={`w-full ${isRecording ? 'bg-destructive hover:bg-destructive/90' : 'bg-primary hover:bg-primary/90'}`}
+              className={`w-full h-12 font-medium transition-all duration-300 ${
+                isRecording 
+                  ? 'bg-destructive hover:bg-destructive/90 animate-pulse' 
+                  : 'bg-primary hover:bg-primary/90 hover:scale-[1.02]'
+              }`}
             >
               {isRecording ? (
                 <>
-                  <MicOff className="h-4 w-4 mr-2" />
+                  <MicOff className="h-5 w-5 mr-2" />
                   Stop Recording
                 </>
               ) : (
                 <>
-                  <Mic className="h-4 w-4 mr-2" />
+                  <Mic className="h-5 w-5 mr-2" />
                   {isLoading ? 'Processing...' : 'Start Recording'}
                 </>
               )}
