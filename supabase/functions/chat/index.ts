@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, conversationComplete, currentStep = 1 } = await req.json();
+    const { messages, conversationComplete } = await req.json();
     const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
     if (!GOOGLE_API_KEY) {
@@ -57,7 +57,17 @@ serve(async (req) => {
       extractedContext.businessFields.push('sales');
     }
     
-    // Step is now passed from frontend - no need to infer it
+    // Determine current step
+    let currentStep = 1;
+    const hasEducation = allMessages.match(/\b(degree|university|college|study|graduated|bachelor|master|phd)\b/);
+    const hasExperience = allMessages.match(/\b(work|experience|job|company|position|worked|years|role)\b/);
+    const hasPreferences = allMessages.match(/\b(looking for|prefer|interested in|want|seeking|ideal)\b/);
+    const hasLocation = allMessages.match(/\b(location|city|remote|hybrid|salary|compensation|range)\b/);
+    
+    if (hasEducation && !hasExperience) currentStep = 2;
+    else if (hasExperience && !hasPreferences) currentStep = 3;
+    else if (hasPreferences && !hasLocation) currentStep = 4;
+    else if (hasLocation) currentStep = 5;
 
     // Build personalized examples based on user's context
     const getPersonalizedExamples = (step: number) => {
@@ -121,24 +131,19 @@ serve(async (req) => {
     - Celebrate their achievements when they share experience
     - Make them feel heard and understood
     
-    ⚠️ CRITICAL: ONLY ask questions relevant to the CURRENT STEP. Do NOT ask about topics from other steps!
-    
     STEP ${currentStep} GUIDANCE:
     
     ${currentStep === 1 ? `
-    📚 BACKGROUND & EDUCATION (STEP 1)
-    - ONLY ask about education: degrees, universities, field of study, graduation year
-    - DO NOT ask about work experience, job preferences, location, or salary
-    - If they mention a specific field, show interest and ask relevant follow-ups about their studies
+    📚 BACKGROUND & EDUCATION
+    - Ask about their educational background warmly
+    - If they mention a specific field, show interest and ask relevant follow-ups
     - Examples should feel natural, not templated
     - END WITH: STEP:1
     ` : ''}
     
     ${currentStep === 2 ? `
-    💼 WORK EXPERIENCE (STEP 2)
-    - ONLY ask about work experience: companies, roles, responsibilities, achievements, years of experience
-    - DO NOT ask about education, job preferences, location, or salary
-    - Acknowledge their education briefly, then focus on work experience
+    💼 WORK EXPERIENCE
+    - Acknowledge their education first!
     - ${getPersonalizedExamples(2)}
     - Be specific to their field - ask about relevant tools, frameworks, or methodologies
     - Show genuine interest in their accomplishments
@@ -146,9 +151,8 @@ serve(async (req) => {
     ` : ''}
     
     ${currentStep === 3 ? `
-    🎯 JOB PREFERENCES (STEP 3)
-    - ONLY ask about job preferences: ideal role, company type, team size, culture, growth opportunities
-    - DO NOT ask about education, work experience, location, or salary
+    🎯 JOB PREFERENCES
+    - Great! Now let's find what excites them
     - ${getPersonalizedExamples(3)}
     - Ask about company size, team dynamics, growth opportunities
     - Help them envision their ideal role
@@ -156,9 +160,7 @@ serve(async (req) => {
     ` : ''}
     
     ${currentStep === 4 ? `
-    📍 LOCATION & COMPENSATION (STEP 4)
-    - ONLY ask about location and compensation: preferred cities, remote work, salary expectations, benefits
-    - DO NOT ask about education, work experience, or job preferences
+    📍 LOCATION & COMPENSATION
     - Almost there! Let's talk logistics
     - ${getPersonalizedExamples(4)}
     - Be realistic but encouraging about salary
@@ -167,9 +169,7 @@ serve(async (req) => {
     ` : ''}
     
     ${currentStep === 5 ? `
-    ✅ FINAL DETAILS (STEP 5)
-    - ONLY review and confirm: summarize their profile, ask start date, final confirmations
-    - DO NOT ask new questions about education, experience, preferences, or location
+    ✅ FINAL DETAILS
     - Review what you've learned in a brief, positive way
     - Ask when they'd like to start
     - Confirm they're happy with everything discussed
