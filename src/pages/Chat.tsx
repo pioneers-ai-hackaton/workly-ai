@@ -118,7 +118,19 @@ const Chat = () => {
 
       // Play the audio
       const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
-      audio.play();
+      
+      try {
+        await audio.play();
+        console.log('Audio playback started');
+      } catch (playError: any) {
+        console.error('Audio playback error:', playError);
+        // If autoplay is blocked, show a toast
+        if (playError.name === 'NotAllowedError') {
+          toast.error('Audio autoplay blocked. Please click to enable audio.');
+        } else {
+          throw playError;
+        }
+      }
     } catch (error: any) {
       console.error('Error generating speech:', error);
       toast.error('Failed to generate speech');
