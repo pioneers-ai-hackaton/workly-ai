@@ -79,10 +79,17 @@ workly/
 - 📦 **Storage** - File storage for CVs and documents
 
 ### **AI & Machine Learning**
-- 🤖 **Google Gemini 2.5 Flash** - Primary AI model for chat and analysis
-- 🎙️ **ElevenLabs** - Text-to-speech and speech-to-text
+- 🤖 **Google Gemini 2.0 Flash Exp** - Primary AI model used directly via Google Cloud API
+  - Used in: chat, CV generation, CV parsing, job matching
+  - Requires `GOOGLE_API_KEY`
+- 🎙️ **Google Cloud Speech-to-Text** - Voice transcription
+  - Requires `GOOGLE_SPEECH_API_KEY`
+- 🔊 **Google Cloud Text-to-Speech** - Voice synthesis
+  - Requires `GOOGLE_TTS_API_KEY`
+- 🎙️ **ElevenLabs** - Alternative text-to-speech provider
   - Models: `eleven_turbo_v2_5`, `eleven_multilingual_v2`
   - Voices: Aria, Roger, Sarah, and more
+  - Requires `ELEVENLABS_API_KEY`
 
 ### **Deployment**
 - 🌐 **Lovable Platform** - Automated deployment and hosting
@@ -137,10 +144,12 @@ VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 VITE_SUPABASE_PROJECT_ID=ceqfrgifrdxtbryjosmm
 
 # Optional: Only needed if running edge functions locally
-# These are automatically configured in Lovable Cloud
-# OPENAI_API_KEY=your_openai_key_here
+# These are automatically configured as Lovable Cloud secrets in production
+# GOOGLE_API_KEY=your_google_api_key_here
+# GOOGLE_SPEECH_API_KEY=your_google_speech_key_here
+# GOOGLE_TTS_API_KEY=your_google_tts_key_here
 # ELEVENLABS_API_KEY=your_elevenlabs_key_here
-# LOVABLE_API_KEY=auto_configured_in_cloud
+# MAPBOX_PUBLIC_TOKEN=your_mapbox_token_here
 ```
 
 4. **Start the development server**
@@ -161,20 +170,29 @@ http://localhost:8080
 
 The application uses the following services that require API keys:
 
-### **Lovable AI** (Pre-configured)
-- Automatically configured in Lovable Cloud
-- No manual setup required
-- Provides access to Google Gemini models
+### **Google Cloud APIs** (Required)
+The project uses Google Cloud services directly:
+- **Google Gemini API** - For AI chat, CV generation, parsing, and job matching
+  - Sign up at [Google AI Studio](https://makersuite.google.com/)
+  - Create an API key and add as `GOOGLE_API_KEY` secret
+- **Google Cloud Speech-to-Text** - For voice transcription
+  - Enable at [Google Cloud Console](https://console.cloud.google.com/)
+  - Create credentials and add as `GOOGLE_SPEECH_API_KEY` secret
+- **Google Cloud Text-to-Speech** - For voice synthesis
+  - Enable at [Google Cloud Console](https://console.cloud.google.com/)
+  - Create credentials and add as `GOOGLE_TTS_API_KEY` secret
 
-### **ElevenLabs** (Required for voice features)
+### **ElevenLabs** (Required for alternative voice features)
 - Sign up at [ElevenLabs](https://elevenlabs.io/)
 - Get your API key from the dashboard
-- Add to Lovable Cloud secrets or `.env` file
+- Add to Lovable Cloud secrets as `ELEVENLABS_API_KEY`
 
-### **OpenAI** (Optional - if using alternative models)
-- Sign up at [OpenAI](https://platform.openai.com/)
-- Generate API key
-- Add to Lovable Cloud secrets
+### **Mapbox** (Required for interactive maps)
+- Sign up at [Mapbox](https://www.mapbox.com/)
+- Create an access token
+- Add to Lovable Cloud secrets as `MAPBOX_PUBLIC_TOKEN`
+
+**Note:** These API keys are stored as Lovable Cloud secrets in production and only need to be added to `.env` for local development.
 
 ---
 
