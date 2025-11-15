@@ -246,8 +246,8 @@ serve(async (req) => {
     📍 LOGISTICS & FINAL DETAILS
     - Get practical details ONE at a time
     - Location preferences, remote willingness, salary range
-    - Briefly recap what you've learned
-    - Once all details collected, add: CONVERSATION_COMPLETE
+    - Once all details collected, say something exciting like "Perfect! I have everything I need to find your ideal job matches!"
+    - Then add: CONVERSATION_COMPLETE
     - END WITH: STEP:5
     ` : ''}
     
