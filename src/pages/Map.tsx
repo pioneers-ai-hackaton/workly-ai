@@ -33,22 +33,10 @@ const Map = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [cvData, setCvData] = useState<CVData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [mapboxToken, setMapboxToken] = useState<string>(() => {
-    return localStorage.getItem('mapbox_token') || '';
-  });
-  const [showTokenInput, setShowTokenInput] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
   const messages = location.state?.messages || [];
-
-  const handleSaveToken = () => {
-    if (mapboxToken) {
-      localStorage.setItem('mapbox_token', mapboxToken);
-      setShowTokenInput(false);
-      toast.success("Mapbox token saved! Refresh to load the map.");
-    }
-  };
 
   useEffect(() => {
     const generateMatches = async () => {
@@ -96,12 +84,13 @@ const Map = () => {
   useEffect(() => {
     if (!mapContainer.current || companies.length === 0) return;
 
-    if (!mapboxToken) {
-      setShowTokenInput(true);
+    const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+    if (!MAPBOX_TOKEN) {
+      toast.error("Map configuration missing");
       return;
     }
 
-    mapboxgl.accessToken = mapboxToken;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -155,7 +144,7 @@ const Map = () => {
       markers.current.forEach(marker => marker.remove());
       map.current?.remove();
     };
-  }, [companies, navigate, mapboxToken]);
+  }, [companies, navigate]);
 
   if (isLoading) {
     return (
@@ -190,46 +179,12 @@ const Map = () => {
       <div className="relative h-[calc(100vh-73px)]">
         <div ref={mapContainer} className="absolute inset-0" />
         
-        {/* Token Input Modal */}
-        {showTokenInput && (
-          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-30 flex items-center justify-center p-4">
-            <div className="bg-card p-6 rounded-lg shadow-elegant max-w-md w-full border border-border">
-              <h3 className="text-lg font-semibold mb-2">Mapbox Token Required</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                To display the map, please enter your Mapbox public token. You can get one from{" "}
-                <a 
-                  href="https://account.mapbox.com/access-tokens/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  mapbox.com
-                </a>
-              </p>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={mapboxToken}
-                  onChange={(e) => setMapboxToken(e.target.value)}
-                  placeholder="pk.eyJ1..."
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                />
-                <Button onClick={handleSaveToken} className="w-full">
-                  Save Token
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
         {/* Info Banner */}
-        {!showTokenInput && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-card/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-large border border-border">
-            <p className="text-sm font-medium">
-              📍 {companies.length} job matches found - Click pins to see details
-            </p>
-          </div>
-        )}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-card/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-large border border-border">
+          <p className="text-sm font-medium">
+            📍 {companies.length} job matches found - Click pins to see details
+          </p>
+        </div>
 
         {/* CV Viewer */}
         {cvData && <CVViewer cvData={cvData} />}
