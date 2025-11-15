@@ -22,6 +22,8 @@ const JobDetails = () => {
   const navigate = useNavigate();
   const company = location.state?.company as CompanyDetails;
   const messages = location.state?.messages as Message[];
+  const companies = location.state?.companies;
+  const cvData = location.state?.cvData;
 
   if (!company) {
     navigate("/map");
@@ -40,7 +42,7 @@ const JobDetails = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/map", { state: { messages } })}
+            onClick={() => navigate("/map", { state: { messages, companies, cvData } })}
             className="hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5" />
