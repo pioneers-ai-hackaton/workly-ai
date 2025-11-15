@@ -6,6 +6,7 @@ import { Send, MapPin, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ChatMessage from "@/components/ChatMessage";
+import { Progress } from "@/components/ui/progress";
 
 interface Message {
   role: "user" | "assistant";
@@ -22,8 +23,18 @@ const Chat = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationComplete, setConversationComplete] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [totalSteps] = useState(5);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const stepLabels = [
+    "Background & Education",
+    "Work Experience",
+    "Job Preferences",
+    "Location & Salary",
+    "Final Details"
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,6 +76,10 @@ const Chat = () => {
         { role: "assistant", content: data.message },
       ]);
 
+      if (data.step && data.step <= totalSteps) {
+        setCurrentStep(data.step);
+      }
+
       if (data.ready) {
         setConversationComplete(true);
       }
@@ -101,6 +116,19 @@ const Chat = () => {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
         <div className="container mx-auto px-4 py-8 max-w-3xl">
+          {/* Progress Steps */}
+          {!conversationComplete && (
+            <div className="mb-8 bg-card/80 backdrop-blur-sm p-6 rounded-lg border border-border">
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="font-medium">Step {currentStep} of {totalSteps}</span>
+                  <span className="text-muted-foreground">{stepLabels[currentStep - 1]}</span>
+                </div>
+                <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {messages.map((message, index) => (
               <ChatMessage key={index} message={message} />
