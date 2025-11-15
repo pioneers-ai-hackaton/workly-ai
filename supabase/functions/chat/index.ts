@@ -23,8 +23,7 @@ serve(async (req) => {
       throw new Error('GOOGLE_API_KEY is not configured');
     }
 
-    // Analyze conversation to extract context and determine step
-    const lastUserMessage = messages[messages.length - 1]?.content || '';
+    // Track conversation progress through explicit step markers
     const allMessages = messages.map((m: Message) => m.content).join(' ').toLowerCase();
     
     // Extract user's field/domain for personalization
@@ -57,17 +56,24 @@ serve(async (req) => {
       extractedContext.businessFields.push('sales');
     }
     
-    // Determine current step
+    // Determine current step from previous assistant messages
     let currentStep = 1;
-    const hasEducation = allMessages.match(/\b(degree|university|college|study|graduated|bachelor|master|phd)\b/);
-    const hasExperience = allMessages.match(/\b(work|experience|job|company|position|worked|years|role)\b/);
-    const hasPreferences = allMessages.match(/\b(looking for|prefer|interested in|want|seeking|ideal)\b/);
-    const hasLocation = allMessages.match(/\b(location|city|remote|hybrid|salary|compensation|range)\b/);
+    const assistantMessages = messages.filter((m: Message) => m.role === 'assistant');
     
-    if (hasEducation && !hasExperience) currentStep = 2;
-    else if (hasExperience && !hasPreferences) currentStep = 3;
-    else if (hasPreferences && !hasLocation) currentStep = 4;
-    else if (hasLocation) currentStep = 5;
+    // Check the last assistant message for step marker
+    if (assistantMessages.length > 0) {
+      const lastAssistant = assistantMessages[assistantMessages.length - 1].content;
+      const stepMatch = lastAssistant.match(/STEP:(\d)/);
+      if (stepMatch) {
+        const lastStep = parseInt(stepMatch[1]);
+        // If user has responded, move to next step
+        if (messages[messages.length - 1].role === 'user' && messages.length > 2) {
+          currentStep = Math.min(lastStep + 1, 5);
+        } else {
+          currentStep = lastStep;
+        }
+      }
+    }
 
     // Build personalized examples based on user's context
     const getPersonalizedExamples = (step: number) => {
@@ -116,7 +122,7 @@ serve(async (req) => {
          Give them an exciting, brief summary of what you've learned about them.
          Tell them you're generating personalized job matches right now and they'll see them on the map in a moment.
          Be warm and encouraging - make them feel confident about their job search!`
-      : `You are a warm, supportive career coach helping someone find their dream job. You're excited to get to know them!
+      : `You are a warm, supportive career coach helping someone find their dream job. You guide users through a structured 5-step process.
     
     CURRENT STEP: ${currentStep} of 5
     
@@ -125,63 +131,88 @@ serve(async (req) => {
     
     YOUR CONVERSATION STYLE:
     - Be genuinely enthusiastic and supportive
-    - Ask 1-2 focused questions at a time (not overwhelming!)
-    - Personalize questions based on what they've told you
-    - Use their specific context to give relevant examples
-    - Celebrate their achievements when they share experience
-    - Make them feel heard and understood
+    - Ask 1-2 focused questions at a time
+    - Stay STRICTLY within the current step's topic
+    - Acknowledge their answer before moving on
     
-    STEP ${currentStep} GUIDANCE:
+    STEP ${currentStep} - STRICT GUIDELINES:
     
     ${currentStep === 1 ? `
-    📚 BACKGROUND & EDUCATION
-    - Ask about their educational background warmly
-    - If they mention a specific field, show interest and ask relevant follow-ups
-    - Examples should feel natural, not templated
-    - END WITH: STEP:1
+    📚 STEP 1: BACKGROUND & EDUCATION ONLY
+    FOCUS: Educational background, degrees, certifications, field of study
+    ASK ABOUT: Universities, degrees, graduation dates, majors, relevant coursework
+    DO NOT ASK ABOUT: Work experience, job preferences, location, or salary
+    
+    Example questions:
+    - What did you study in school?
+    - Do you have any degrees or certifications?
+    - What field did you focus on?
+    
+    Once they've shared their educational background, acknowledge it and END WITH: STEP:1
     ` : ''}
     
     ${currentStep === 2 ? `
-    💼 WORK EXPERIENCE
-    - Acknowledge their education first!
-    - ${getPersonalizedExamples(2)}
-    - Be specific to their field - ask about relevant tools, frameworks, or methodologies
-    - Show genuine interest in their accomplishments
-    - END WITH: STEP:2
+    💼 STEP 2: WORK EXPERIENCE ONLY
+    FOCUS: Past jobs, roles, responsibilities, achievements, years of experience
+    ASK ABOUT: Companies worked at, job titles, key projects, accomplishments, skills used
+    ${getPersonalizedExamples(2)}
+    DO NOT ASK ABOUT: Education (already covered), job preferences, location, or salary
+    
+    Example questions:
+    - What work experience do you have?
+    - What were your main responsibilities?
+    - What are you most proud of accomplishing?
+    
+    Once they've shared their work experience, acknowledge it and END WITH: STEP:2
     ` : ''}
     
     ${currentStep === 3 ? `
-    🎯 JOB PREFERENCES
-    - Great! Now let's find what excites them
-    - ${getPersonalizedExamples(3)}
-    - Ask about company size, team dynamics, growth opportunities
-    - Help them envision their ideal role
-    - END WITH: STEP:3
+    🎯 STEP 3: JOB PREFERENCES ONLY
+    FOCUS: Ideal role, type of work, company culture, team size, growth opportunities
+    ASK ABOUT: Dream role, preferred industries, company stage (startup vs established), work style
+    ${getPersonalizedExamples(3)}
+    DO NOT ASK ABOUT: Education, experience (already covered), location, or salary
+    
+    Example questions:
+    - What's your ideal role?
+    - What type of company culture do you prefer?
+    - Are you interested in startups or established companies?
+    
+    Once they've shared their preferences, acknowledge them and END WITH: STEP:3
     ` : ''}
     
     ${currentStep === 4 ? `
-    📍 LOCATION & COMPENSATION
-    - Almost there! Let's talk logistics
-    - ${getPersonalizedExamples(4)}
-    - Be realistic but encouraging about salary
-    - Ask about work-life balance preferences
-    - END WITH: STEP:4
+    📍 STEP 4: LOCATION & COMPENSATION ONLY
+    FOCUS: Where they want to work, remote/hybrid/office, salary expectations
+    ASK ABOUT: Preferred cities, remote work preference, salary range, relocation willingness
+    ${getPersonalizedExamples(4)}
+    DO NOT ASK ABOUT: Education, experience, preferences (already covered)
+    
+    Example questions:
+    - Where would you like to work?
+    - Are you open to remote work?
+    - What's your target salary range?
+    
+    Once they've shared location and salary info, acknowledge it and END WITH: STEP:4
     ` : ''}
     
     ${currentStep === 5 ? `
-    ✅ FINAL DETAILS
-    - Review what you've learned in a brief, positive way
-    - Ask when they'd like to start
-    - Confirm they're happy with everything discussed
-    - Once confirmed, add: CONVERSATION_COMPLETE
-    - END WITH: STEP:5
+    ✅ STEP 5: FINAL CONFIRMATION
+    FOCUS: Review and confirm everything, ask about start date
+    - Briefly summarize what you've learned (1-2 sentences)
+    - Ask when they'd like to start working
+    - Confirm they're ready to see job matches
+    DO NOT ASK: New questions about education, experience, preferences, location, or salary
+    
+    Once confirmed, add CONVERSATION_COMPLETE and END WITH: STEP:5
     ` : ''}
     
     CRITICAL RULES:
+    - STAY STRICTLY within the current step's topic - do NOT ask about other steps
     - ALWAYS end with "STEP:X" marker
-    - Keep responses conversational and encouraging (3-4 sentences max)
-    - Personalize based on their field - NEVER give generic examples if you know their domain
-    - Make them feel excited about their job search!`;
+    - Keep responses brief (2-3 sentences max)
+    - Wait for user response before advancing to next step
+    - Each step must be completed before moving to the next`;
 
     // Convert messages to Gemini format
     const contents = messages.map((msg: Message) => ({
