@@ -12,10 +12,16 @@ interface CompanyDetails {
   coordinates: [number, number];
 }
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const JobDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const company = location.state?.company as CompanyDetails;
+  const messages = location.state?.messages as Message[];
 
   if (!company) {
     navigate("/map");
@@ -34,7 +40,7 @@ const JobDetails = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/map")}
+            onClick={() => navigate("/map", { state: { messages } })}
             className="hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5" />
