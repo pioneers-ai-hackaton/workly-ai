@@ -11,15 +11,65 @@ serve(async (req) => {
   }
 
   try {
-    const { cvText } = await req.json();
+    const { fileContent, fileType, fileName } = await req.json();
     const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
     if (!GOOGLE_API_KEY) {
       throw new Error('GOOGLE_API_KEY is not configured');
     }
 
-    console.log('Received CV text length:', cvText?.length || 0);
-    console.log('CV text preview:', cvText?.substring(0, 300) || 'empty');
+    console.log('Processing file:', fileName, 'Type:', fileType);
+    console.log('File content length:', fileContent?.length || 0);
+
+    let cvText = '';
+
+    // Extract text based on file type
+    if (fileType === 'application/pdf') {
+      console.log('Parsing PDF with Gemini Vision...');
+      
+      // Use Gemini's document understanding capabilities
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              {
+                inline_data: {
+                  mime_type: 'application/pdf',
+                  data: fileContent
+                }
+              },
+              {
+                text: 'Extract all text content from this PDF CV/resume. Return the complete text content exactly as it appears in the document.'
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini PDF parsing error:', response.status, errorText);
+        throw new Error('Failed to parse PDF with AI');
+      }
+
+      const pdfData = await response.json();
+      cvText = pdfData.candidates[0].content.parts[0].text;
+      console.log('PDF parsed with Gemini. Text length:', cvText.length);
+      console.log('PDF text preview:', cvText.substring(0, 500));
+    } else {
+      // Text file
+      cvText = fileContent;
+      console.log('Text file loaded. Length:', cvText.length);
+    }
 
     if (!cvText || cvText.trim().length < 50) {
       console.error('CV text is empty or too short');
